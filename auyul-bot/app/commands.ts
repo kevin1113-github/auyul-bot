@@ -29,7 +29,10 @@ const Commands: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" 
   new SlashCommandBuilder()
     .setName('음소거해제')
     .setDescription('아율봇의 음소거를 해제합니다.'),
-      
+
+  new SlashCommandBuilder()
+    .setName('리모컨')
+    .setDescription('조작이 손쉬운 리모컨 웹 페이지 링크를 불러옵니다.'),
 ];
 
 export default Commands;
