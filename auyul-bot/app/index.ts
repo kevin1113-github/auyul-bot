@@ -17,6 +17,7 @@ import { RegisterUser, RegisterUserMsg } from "./dbFunction.js";
 import { JoinedServer, Servers, Users } from "./dbObject.js";
 import Action from "./action.js";
 import { DATA, GuildData } from "./types.js";
+import HttpServer from "./api.js";
 
 const guildDataList: GuildData[] = [];
 
@@ -32,6 +33,7 @@ try {
 
 // When bot is ready.
 const client = new Client({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ] });
+let httpServer: HttpServer;
 client.once(Events.ClientReady, async () => {
   // TODO: DB 불러오기
   await Servers.sync();
@@ -39,9 +41,12 @@ client.once(Events.ClientReady, async () => {
   await JoinedServer.sync();
 
   const servers = await Servers.findAll();
+
   for (const server of servers) {
     guildDataList.push({ guildId: server.dataValues.id, audioPlayer: null, action: new Action(), timeOut: null });
   }
+  httpServer = new HttpServer(client);
+  httpServer.start();
   console.log(`${client.user?.tag} 로그인 성공!`);
 });
 
@@ -219,3 +224,8 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 client.login(TOKEN);
+
+function getNickName(interaction: Interaction): string {
+  const name: string = interaction.user.globalName || interaction.user.username;
+  return interaction.member instanceof GuildMember ? interaction.member.nickname || name : name;
+}
