@@ -49,6 +49,20 @@ export default class HttpServer {
         res.end();
       });
     }
+
+    // else if (req.url === "/controller" && req.method === "GET") {
+
+    //   res.writeHead(200, { "Content-Type": "text/html" });
+    //   res.write("<h1>Controller</h1>");
+    //   res.write("<form action='/notice' method='post'>");
+    //   res.write("<input type='text' name='password' placeholder='password' />");
+    //   res.write("<input type='text' name='data' placeholder='data' />");
+    //   res.write("<input type='submit' />");
+    //   res.write("</form>");
+    //   res.end();
+
+    // }
+
     else {
       res.writeHead(404, { "Content-Type": "text/html" });
       res.write("<h1>404 Not Found</h1>");

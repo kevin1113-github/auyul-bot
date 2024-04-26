@@ -33,6 +33,10 @@ const Commands: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" 
   new SlashCommandBuilder()
     .setName('리모컨')
     .setDescription('조작이 손쉬운 리모컨 웹 페이지 링크를 불러옵니다.'),
+
+  new SlashCommandBuilder()
+    .setName('도움말')
+    .setDescription('도움말을 불러옵니다.'),
 ];
 
 export default Commands;
