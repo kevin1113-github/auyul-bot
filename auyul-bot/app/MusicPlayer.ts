@@ -1,35 +1,46 @@
+// MusicPlayer.ts
 
+// 음악 클래스
+class Music {
+  title: string;
+  duration: number;
+  url: string;
+  thumbnail: string;
+
+  constructor(title: string, duration: number, url: string, thumbnail: string) {
+    this.title = title;
+    this.duration = duration;
+    this.url = url;
+    this.thumbnail = thumbnail;
+  }
+}
+
+// 음악 플레이어 클래스
 export default class MusicPlayer {
-  queue: any[];
-  volume: number;
-  isRepeat: boolean;
-  isShuffle: boolean;
-  isPlaying: boolean;
-  isLoop: boolean;
+  queue: Music[];     // 음악 큐
+  volume: number;     // 볼륨
+  isPlaying: boolean; // 재생 중
+  isRepeat: boolean;  // 반복 재생
+  isShuffle: boolean; // 셔플 재생
+  isLoop: boolean;    // 루프 재생
+
   constructor() {
     this.queue = [];
-    this.volume = 0.5;
+    this.volume = 50;
+    this.isPlaying = false;
     this.isRepeat = false;
     this.isShuffle = false;
-    this.isPlaying = false;
     this.isLoop = false;
   }
 
   async play() {
-    if (this.queue.length === 0) {
-      return;
-    }
     this.isPlaying = true;
-    while (this.queue.length > 0) {
-      const song = this.queue.shift();
-      console.log(`재생: ${song.title}`);
-      await this.sleep(song.duration);
-    }
-    this.isPlaying = false;
+    // TODO: Play Logic
   }
 
   async pause() {
     this.isPlaying = false;
+    // TODO: Pause Logic
   }
 
   async stop() {
@@ -41,7 +52,7 @@ export default class MusicPlayer {
     this.queue.shift();
   }
 
-  async add(song: any) {
+  async add(song: Music) {
     this.queue.push(song);
   }
 
@@ -59,14 +70,6 @@ export default class MusicPlayer {
 
   async loop() {
     this.isLoop = !this.isLoop;
-  }
-
-  async shuffleArray(array: any[]) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
   }
 
   async sleep(ms: number) {
@@ -119,13 +122,14 @@ export default class MusicPlayer {
     this.queue = [];
   }
 
-  async getQueueIndex() {
-    return this.queue.map((song, index) => index);
+  async getQueueIndex(song: Music) {
+    return this.queue.indexOf(song);
   }
 
   async getQueueSong(index: number) {
     return this.queue[index];
   }
+
 
   async getQueueSongTitle(index: number) {
     return this.queue[index].title;
@@ -143,23 +147,11 @@ export default class MusicPlayer {
     return this.queue[index].thumbnail;
   }
 
-  async getQueueSongAuthor(index: number) {
-    return this.queue[index].author;
-  }
-
-  async getQueueSongViews(index: number) {
-    return this.queue[index].views;
-  }
-
-  async getQueueSongDescription(index: number) {
-    return this.queue[index].description;
-  }
-
-  async getQueueSongTimestamp(index: number) {
-    return this.queue[index].timestamp;
-  }
-
-  async getQueueSongRequestedBy(index: number) {
-    return this.queue[index].requestedBy;
+  private async shuffleArray(array: any[]) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
   }
 }
