@@ -1,5 +1,7 @@
 // MusicPlayer.ts
 
+import { AudioPlayer } from "@discordjs/voice";
+
 // 음악 클래스
 class Music {
   title: string;
@@ -17,6 +19,7 @@ class Music {
 
 // 음악 플레이어 클래스
 export default class MusicPlayer {
+  player: AudioPlayer; // 오디오 플레이어
   queue: Music[];     // 음악 큐
   volume: number;     // 볼륨
   isPlaying: boolean; // 재생 중
@@ -24,13 +27,22 @@ export default class MusicPlayer {
   isShuffle: boolean; // 셔플 재생
   isLoop: boolean;    // 루프 재생
 
-  constructor() {
+  constructor(player: AudioPlayer) {
+    this.player = player;
     this.queue = [];
     this.volume = 50;
     this.isPlaying = false;
     this.isRepeat = false;
     this.isShuffle = false;
     this.isLoop = false;
+  }
+
+  async setPlayer(player: AudioPlayer) {
+    this.player = player;
+  }
+
+  async getPlayer() {
+    return this.player;
   }
 
   async play() {
