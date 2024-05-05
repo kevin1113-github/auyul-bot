@@ -1,6 +1,6 @@
 // MusicPlayer.ts
 
-import { AudioPlayer } from "@discordjs/voice";
+import { AudioPlayer, AudioResource, StreamType, createAudioResource } from "@discordjs/voice";
 
 // 음악 클래스
 class Music {
@@ -8,12 +8,14 @@ class Music {
   duration: number;
   url: string;
   thumbnail: string;
+  audioResource: AudioResource;
 
   constructor(title: string, duration: number, url: string, thumbnail: string) {
     this.title = title;
     this.duration = duration;
     this.url = url;
     this.thumbnail = thumbnail;
+    this.audioResource = createAudioResource(url);
   }
 }
 
@@ -48,6 +50,11 @@ export default class MusicPlayer {
   async play() {
     this.isPlaying = true;
     // TODO: Play Logic
+    if (this.queue.length === 0) {
+      this.isPlaying = false;
+      return;
+    }
+    this.player.play(this.queue[0].audioResource);
   }
 
   async pause() {
