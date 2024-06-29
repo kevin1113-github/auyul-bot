@@ -6,7 +6,7 @@ const REQUEST_PASSWORD: string = process.env.REQUEST_PASSWORD ?? '';
 
 import http from "http";
 import { Servers } from "./dbObject.js";
-import { DATA } from "./types.js";
+import { T_DATA } from "./types.js";
 
 export default class HttpServer {
   private server: http.Server;
@@ -14,7 +14,7 @@ export default class HttpServer {
 
   private async notice(data: string) {
     await Servers.sync();
-    const servers: DATA[] = await Servers.findAll();
+    const servers: T_DATA[] = await Servers.findAll();
     for (const server of servers) {
       const ttsChannel = server.dataValues.ttsChannel;
       // if(ttsChannel && server.dataValues.id == '1215573434159996948') {
@@ -76,8 +76,8 @@ export default class HttpServer {
   }
 
   start() {
-    this.server.listen(8080, () => {
-      console.log("Server is running on 8080 port");
+    this.server.listen(8081, () => {
+      console.log("Server is running on 8081 port");
     });
   }
 

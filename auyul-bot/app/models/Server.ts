@@ -9,11 +9,6 @@ export default (sequelize: Sequelize, DataTypes: any) => {
     commandChannel: {
       type: DataTypes.STRING,
       allowNull: true,
-    },
-		isMuted: {
-			type: DataTypes.BOOLEAN,
-			allowNull: false,
-			defaultValue: false,
-		}
+    }
 	});
 };
