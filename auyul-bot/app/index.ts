@@ -4,6 +4,8 @@ const TOKEN: string = process.env.TOKEN ?? "";
 const CLIENT_ID: string = process.env.CLIENT_ID ?? "";
 // console.log(TOKEN, CLIENT_ID);
 
+const DEV_MODE: boolean = process.env.DEV_MODE === "true" ? true : false;
+
 import { __dirname } from "./const.js";
 
 import {
@@ -79,6 +81,7 @@ import { searchMusic } from "./youtube_music.js";
 import yts, { VideoMetadataResult } from "yt-search";
 import {
   DeleteConfirmMessage,
+  DeleteMusicMessage,
   DeleteMyPlaylistMessage,
   EmptyEmbedMessage,
   MainController,
@@ -122,6 +125,10 @@ client.once(Events.ClientReady, async () => {
   const servers = await Servers.findAll();
 
   for (const server of servers) {
+    if (DEV_MODE && server.dataValues.id != "1233212899862908938") {
+      continue;
+    }
+
     // 메인 메세지 전송
     const commandChannel = (await (
       await client.channels.fetch(server.dataValues.commandChannel)
@@ -146,6 +153,7 @@ client.once(Events.ClientReady, async () => {
   }
   httpServer = new HttpServer(client);
   httpServer.start();
+  console.log("DEV_MODE: ", DEV_MODE);
   console.log(`${client.user?.tag} 로그인 성공!`);
 });
 
@@ -166,6 +174,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
   });
   if (!server) {
     console.error("서버가 등록되지 않았습니다.");
+    return;
+  }
+
+  // dev mode
+  if (DEV_MODE && server.dataValues.id != "1233212899862908938") {
     return;
   }
 
@@ -566,7 +579,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const createdPlaylist = await UserPlaylist.create({
         user_id: interaction.user.id,
         name: playlistName,
-        playlist: guildData.playlist,
+        playlist: guildData.playlist.map((v) => v.music),
       });
 
       if (interaction.isFromMessage()) {
@@ -591,7 +604,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.reply({
         ...new PlaylistMessage(
           guildData.playlist,
-          0,
+          guildData.playingIndex,
           guildData.isPlaying
         ).getMessage(),
         ephemeral: true,
@@ -680,7 +693,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.update(
         new PlaylistMessage(
           guildData.playlist,
-          0,
+          guildData.playingIndex,
           guildData.isPlaying,
           parseInt(interaction.customId.substring(8)) - 1
         ).getMessage()
@@ -692,7 +705,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.update(
         new PlaylistMessage(
           guildData.playlist,
-          0,
+          guildData.playingIndex,
           guildData.isPlaying,
           parseInt(interaction.customId.substring(8)) + 1
         ).getMessage()
@@ -937,6 +950,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
       return;
     }
+
+    if (interaction.customId === "deleteMusicInPlaylist") {
+      await interaction.update(
+        new DeleteMusicMessage(guildData.playlist).getMessage()
+      );
+    }
   }
 
   // 셀렉트 메뉴 인터렉션
@@ -1035,6 +1054,109 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
       return;
     }
+
+    if (interaction.customId === "deleteMusic") {
+      await interaction.deferUpdate();
+      await interaction.deleteReply();
+
+      const index: number = parseInt(interaction.values[0]);
+
+      // if (guildData.playlist.length == 0 && index == 0) {
+
+      // }
+
+      if (guildData.playingIndex == index) {
+        if (guildData.isPlaying) {
+          playNext(guildData);
+        }
+      }
+      if (guildData.playingIndex > index) {
+        guildData.playingIndex -= 1;
+      }
+      guildData.playlist.splice(index, 1);
+    }
+  }
+});
+
+// When bot received message.
+client.on(Events.MessageCreate, async (message) => {
+  if (!message.guildId) {
+    return;
+  }
+
+  // get server data
+  const server: T_DATA | null = await Servers.findOne({
+    where: { id: message.guildId },
+  });
+  if (!server) {
+    console.error("서버가 등록되지 않았습니다.");
+    return;
+  }
+
+  // dev mode
+  if (DEV_MODE && server.dataValues.id != "1233212899862908938") {
+    return;
+  }
+
+  // get guild data
+  let guildData: T_GuildData | undefined = guildDataList.find(
+    (data) => data.guildId == message.guildId
+  );
+  if (!guildData) {
+    guildData = {
+      guildId: message.guildId,
+      audioPlayer: null,
+      action: new Action(),
+      playlist: [],
+      playingIndex: 0,
+      playingTime: 0,
+      isPlaying: false,
+      isRepeat: false,
+      timeOut: null,
+      mainMessage: null,
+    } as T_GuildData;
+
+    guildDataList.push(guildData);
+  }
+
+  if (message.author.bot) {
+    return;
+  }
+
+  if (message.channelId != server.dataValues.commandChannel) {
+    return;
+  }
+
+  guildData.action.setInteraction(message);
+
+  // delete message
+  await message.delete();
+
+  // search music
+  const keyword: string = message.content;
+  const result: yts.VideoSearchResult = (await searchMusic(keyword))[0];
+  const video: yts.VideoMetadataResult = await yts({ videoId: result.videoId });
+
+  // add music to playlist
+  guildData.playlist.push({
+    music: video,
+    play_user: message.author,
+  });
+
+  // // join voice channel
+  // if (!guildData.audioPlayer) {
+  //   const audioPlayer = createAudioPlayer({
+  //     behaviors: {
+  //       noSubscriber: NoSubscriberBehavior.Pause,
+  //     },
+  //   });
+  //   guildData.audioPlayer = audioPlayer;
+  //   await guildData.action.joinVoiceChannel(audioPlayer);
+  // }
+
+  // play music
+  if (!guildData.isPlaying) {
+    playMusic(guildData, guildData.playlist.length - 1);
   }
 });
 
@@ -1042,7 +1164,9 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   if (!oldState.guild) {
     return;
   }
-  const connection: VoiceConnection | undefined = getVoiceConnection(oldState.guild.id);
+  const connection: VoiceConnection | undefined = getVoiceConnection(
+    oldState.guild.id
+  );
   if (!connection) {
     return;
   }
@@ -1063,7 +1187,9 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       if (nonBotMembers.size === 0) {
         // 음성 채널에서 봇을 나가게 합니다.
         connection.destroy();
-        const guildData: T_GuildData | undefined = guildDataList.find((data) => data.guildId == oldState.guild?.id);
+        const guildData: T_GuildData | undefined = guildDataList.find(
+          (data) => data.guildId == oldState.guild?.id
+        );
         if (!guildData) {
           return;
         }
@@ -1114,10 +1240,28 @@ eventify_push(guildDataList, (list: T_GuildData[], guildData: T_GuildData) => {
       playMusic(guildData);
     }
   );
+
+  // 플레이리스트 뒤에 음악이 추가될 때마다 실행
+  eventify_push(
+    guildData.playlist,
+    (list: T_GuildPlaylist[], music: T_GuildPlaylist) => {
+      if (guildData.isPlaying) {
+        guildData.mainMessage?.edit(
+          new MainControllerPlayingMessage(
+            guildData.playlist,
+            guildData.playingIndex,
+            guildData.playingTime,
+            guildData.isPlaying,
+            guildData.isRepeat
+          ).getMessage()
+        );
+      }
+    }
+  );
 });
 
 // playlist 재생
-function playMusic(guildData: T_GuildData) {
+function playMusic(guildData: T_GuildData, index: number = 0) {
   if (guildData.playlist.length > 0) {
     // play added music which is first music
     const audioPlayer = createAudioPlayer({
@@ -1126,13 +1270,24 @@ function playMusic(guildData: T_GuildData) {
       },
     });
     audioPlayer.on("error", (error) => {
-      console.error("Error:", error.message);
+      // console.error("Error:", error.message);
+      console.error("Error:", error);
       // 추가적인 오류 처리 로직
       audioPlayer.stop();
-      audioPlayer.play(
-        ytdlAudioResource(guildData.playlist[guildData.playingIndex].music.url)
-      );
+      guildData.isPlaying = false;
+      guildData.playingIndex = 0;
       guildData.playingTime = 0;
+      guildData.audioPlayer = null;
+      guildData.mainMessage?.edit(MainController);
+      const voiceConnection: VoiceConnection | undefined = getVoiceConnection(
+        guildData.guildId
+      );
+      if (voiceConnection) {
+        voiceConnection.destroy();
+      }
+      if (guildData.timeOut) {
+        clearInterval(guildData.timeOut);
+      }
     });
     guildData.audioPlayer = audioPlayer;
     const voiceChannel: VoiceBasedChannel | null = (
@@ -1174,10 +1329,10 @@ function playMusic(guildData: T_GuildData) {
       );
       connection.subscribe(audioPlayer);
     }
-    const resource = ytdlAudioResource(guildData.playlist[0].music.url);
+    const resource = ytdlAudioResource(guildData.playlist[index].music.url);
     guildData.audioPlayer.play(resource);
     guildData.isPlaying = true;
-    guildData.playingIndex = 0;
+    guildData.playingIndex = index;
     guildData.playingTime = 0;
 
     guildData.mainMessage.edit(
@@ -1195,7 +1350,7 @@ function playMusic(guildData: T_GuildData) {
         return;
       }
       guildData.playingTime += 1;
-      if (guildData.playingTime % 2 == 0) {
+      if (guildData.playingTime % 5 == 0) {
         guildData.mainMessage?.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
@@ -1206,41 +1361,48 @@ function playMusic(guildData: T_GuildData) {
           ).getMessage()
         );
       }
+
+      // 음악이 끝나면 다음 음악을 재생
       if (
         guildData.playingTime >=
         guildData.playlist[guildData.playingIndex].music.seconds
       ) {
-        guildData.playingTime = 0;
-
-        if (guildData.isRepeat) {
-          const resource = ytdlAudioResource(
-            guildData.playlist[guildData.playingIndex].music.url
-          );
-          guildData.audioPlayer?.play(resource);
-        } else if (guildData.playingIndex + 1 < guildData.playlist.length) {
-          guildData.playingIndex += 1;
-          const resource = ytdlAudioResource(
-            guildData.playlist[guildData.playingIndex].music.url
-          );
-          guildData.audioPlayer?.play(resource);
-        } else {
-          guildData.isPlaying = false;
-          guildData.playingIndex = 0;
-          guildData.playingTime = 0;
-          guildData.audioPlayer?.stop();
-          guildData.mainMessage?.edit(MainController);
-          const voiceConnection: VoiceConnection | undefined =
-            getVoiceConnection(guildData.guildId);
-          if (voiceConnection) {
-            voiceConnection.destroy();
-          }
-          if (guildData.timeOut) {
-            clearInterval(guildData.timeOut);
-          }
-        }
+        playNext(guildData);
       }
     }, 1000);
     guildData.timeOut = timeOut;
+  }
+}
+
+function playNext(guildData: T_GuildData) {
+  guildData.playingTime = 0;
+
+  // 반복 재생일 경우
+  if (guildData.isRepeat) {
+    const resource = ytdlAudioResource(
+      guildData.playlist[guildData.playingIndex].music.url
+    );
+    guildData.audioPlayer?.play(resource);
+  }
+  // 반복 재생이 아니고 마지막 음악이 아닐 경우
+  else if (guildData.playingIndex + 1 < guildData.playlist.length) {
+    guildData.playingIndex += 1;
+    const resource = ytdlAudioResource(
+      guildData.playlist[guildData.playingIndex].music.url
+    );
+    guildData.audioPlayer?.play(resource);
+  }
+  // 반복 재생이 아니고 마지막 음악일 경우
+  else {
+    if (guildData.timeOut) {
+      clearInterval(guildData.timeOut);
+    }
+    guildData.isPlaying = false;
+    guildData.playingIndex = 0;
+    guildData.playingTime = 0;
+    guildData.audioPlayer?.stop();
+    guildData.mainMessage?.edit(MainController);
+    getVoiceConnection(guildData.guildId)?.destroy();
   }
 }
 

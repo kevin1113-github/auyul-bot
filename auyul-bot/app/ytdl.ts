@@ -1,5 +1,6 @@
 import { createAudioResource } from "@discordjs/voice";
-import ytdl from "ytdl-core";
+// import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 
 function ytdlmusic (url: string) {
   return ytdl(url, {
@@ -12,5 +13,6 @@ function ytdlmusic (url: string) {
 }
 
 export function ytdlAudioResource (url: string) {
+  // console.log("ytdlAudioResource", url);
   return createAudioResource(ytdlmusic(url));
 }

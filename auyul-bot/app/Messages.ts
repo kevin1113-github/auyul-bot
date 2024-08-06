@@ -139,7 +139,10 @@ export class MainControllerPlayingMessage implements MessageInterface {
       .setDescription(
         `게시자: ${playlist[playingIndex].music.author.name}\n길이: ${
           playlist[playingIndex].music.timestamp
-        }\n조회수: ${playlist[playingIndex].music.views}회\n링크: [Link](${
+        }\n조회수: ${modifiedViews(
+          playlist[playingIndex].music.views
+        )}\n링크: [Link](${
+          // TODO: 조회수 m, k 단위로 변경
           playlist[playingIndex].music.url
         })\n추가자: <@${
           playlist[playingIndex].play_user.id
@@ -150,7 +153,7 @@ export class MainControllerPlayingMessage implements MessageInterface {
       // .setTitle(`0:00 ━━━━●────────── 4:00`)
       // .setTitle(``)
       .setThumbnail(playlist[playingIndex].play_user.displayAvatarURL())
-      .setImage(playlist[0].music.thumbnail)
+      .setImage(playlist[playingIndex].music.thumbnail)
       .setTimestamp()
       .setFooter({
         text: "아율봇",
@@ -232,6 +235,7 @@ export class PlaylistMessage implements MessageInterface {
   private nextButton: ButtonBuilder;
   private actionRow2: ActionRowBuilder<ButtonBuilder>;
   private playButton: ButtonBuilder;
+  private deleteButton: ButtonBuilder;
 
   constructor(
     playlist: T_GuildPlaylist[],
@@ -253,9 +257,7 @@ export class PlaylistMessage implements MessageInterface {
     } else if (isPlaying) {
       this.playlistMessageEmbed
         .setTitle("현재 재생중인 목록입니다.")
-        .setDescription(
-          `재생중: ${this.playlist[playingIndex].music.title}`
-        )
+        .setDescription(`재생중: ${this.playlist[playingIndex].music.title}`)
         .setThumbnail(this.playlist[playingIndex].music.thumbnail)
         .addFields(
           this.playlist
@@ -268,28 +270,34 @@ export class PlaylistMessage implements MessageInterface {
                 name: `${playingIndex == pageIndex * 10 + index ? "▶️ " : ""} ${
                   pageIndex * 10 + index + 1
                 }. ${video.music.title}`,
-                value: `게시자: ${video.music.author.name} | 길이: ${video.music.timestamp} | 조회수: ${video.music.views}회 | [링크](${video.music.url}) | 추가자: <@${video.play_user.id}>`,
+                value: `${
+                  playingIndex == pageIndex * 10 + index ? "▶️ " : ""
+                } 게시자: ${video.music.author.name} | 길이: ${
+                  video.music.timestamp
+                } | 조회수: ${modifiedViews(video.music.views)} | [링크](${
+                  video.music.url
+                }) | 추가자: <@${video.play_user.id}>`,
               };
             })
         );
     } else {
-      this.playlistMessageEmbed
-        .setTitle("재생목록입니다.")
-        .addFields(
-          this.playlist
-            .slice(
-              pageIndex * 10,
-              Math.min((pageIndex + 1) * 10, playlist.length)
-            )
-            .map((video, index) => {
-              return {
-                name: `${
-                  pageIndex * 10 + index + 1
-                }. ${video.music.title}`,
-                value: `게시자: ${video.music.author.name} | 길이: ${video.music.timestamp} | 조회수: ${video.music.views}회 | [링크](${video.music.url}) | 추가자: <@${video.play_user.id}>`,
-              };
-            })
-        );
+      this.playlistMessageEmbed.setTitle("재생목록입니다.").addFields(
+        this.playlist
+          .slice(
+            pageIndex * 10,
+            Math.min((pageIndex + 1) * 10, playlist.length)
+          )
+          .map((video, index) => {
+            return {
+              name: `${pageIndex * 10 + index + 1}. ${video.music.title}`,
+              value: `게시자: ${video.music.author.name} | 길이: ${
+                video.music.timestamp
+              } | 조회수: ${modifiedViews(video.music.views)} | [링크](${
+                video.music.url
+              }) | 추가자: <@${video.play_user.id}>`,
+            };
+          })
+      );
     }
 
     this.playlistMessageEmbed.setTimestamp().setFooter({
@@ -327,8 +335,14 @@ export class PlaylistMessage implements MessageInterface {
       .setStyle(ButtonStyle.Success)
       .setEmoji("1256636200157053009")
       .setDisabled(isPlaying || playlist.length === 0);
+    this.deleteButton = new ButtonBuilder()
+      .setCustomId("deleteMusicInPlaylist")
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji("🗑️")
+      .setDisabled(playlist.length === 0);
     this.actionRow2 = new ActionRowBuilder().addComponents(
-      this.playButton
+      this.playButton,
+      this.deleteButton
     ) as ActionRowBuilder<ButtonBuilder>;
   }
 
@@ -336,6 +350,48 @@ export class PlaylistMessage implements MessageInterface {
     return {
       embeds: [this.playlistMessageEmbed],
       components: [this.actionRow1, this.actionRow2],
+    };
+  }
+}
+
+export class DeleteMusicMessage implements MessageInterface {
+  private playlist: T_GuildPlaylist[];
+  private deleteMusicMessageEmbed: EmbedBuilder;
+  private actionRow: ActionRowBuilder<StringSelectMenuBuilder>;
+  private selectMusicMenu: StringSelectMenuBuilder;
+
+  constructor(playlist: T_GuildPlaylist[]) {
+    this.playlist = playlist;
+    this.deleteMusicMessageEmbed = new EmbedBuilder()
+      .setColor("#ccbdb7")
+      .setTitle("음악 삭제")
+      .setDescription("삭제할 음악을 선택해주세요.")
+      .setTimestamp()
+      .setFooter({
+        text: "아율봇",
+        iconURL:
+          "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
+      });
+
+    this.selectMusicMenu = new StringSelectMenuBuilder()
+      .setCustomId("deleteMusic")
+      .setPlaceholder("음악을 선택해주세요.")
+      .addOptions(
+        this.playlist.map((video: T_GuildPlaylist, i: number) => {
+          return new StringSelectMenuOptionBuilder()
+            .setLabel(video.music.title)
+            .setValue(i.toString());
+        })
+      );
+    this.actionRow = new ActionRowBuilder().addComponents(
+      this.selectMusicMenu
+    ) as ActionRowBuilder<StringSelectMenuBuilder>;
+  }
+
+  public getMessage() {
+    return {
+      embeds: [this.deleteMusicMessageEmbed],
+      components: [this.actionRow],
     };
   }
 }
@@ -546,7 +602,11 @@ export class MyPlaylistMessage implements MessageInterface {
             .map((video, index) => {
               return {
                 name: `${pageIndex * 10 + index + 1}. ${video.title}`,
-                value: `${video.author.name} | ${video.timestamp} | 조회수: ${video.views}회 | [링크](${video.url})`,
+                value: `${video.author.name} | ${
+                  video.timestamp
+                } | 조회수: ${modifiedViews(video.views)} | [링크](${
+                  video.url
+                })`,
               };
             })
         );
@@ -763,5 +823,15 @@ function getTimeFormat(playingTime: number, endTime: number): string {
     return `${hours}:${minutes < 10 ? "0" + minutes : minutes}:${
       seconds < 10 ? "0" + seconds : seconds
     }`;
+  }
+}
+
+function modifiedViews(views: number): string {
+  if (views >= 1000000) {
+    return Math.floor(views / 1000000) + "M";
+  } else if (views >= 1000) {
+    return Math.floor(views / 1000) + "K";
+  } else {
+    return views.toString();
   }
 }
