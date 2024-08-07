@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "nodemon --watch ./app/ ./.cache/index.js",
-    "start": "nodemon ./.cache/index.js > ./app.log &"
+    "start": "nodemon --trace-deprecation ./.cache/index.js > ./app.log &"
   },
   "author": "",
   "license": "ISC",
