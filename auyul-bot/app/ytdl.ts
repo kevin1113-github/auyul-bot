@@ -1,9 +1,13 @@
 import { createAudioResource } from "@discordjs/voice";
 // import ytdl from "ytdl-core";
 import ytdl from "@distube/ytdl-core";
+import fs from "fs";
+
+const agent = ytdl.createAgent(JSON.parse(fs.readFileSync("cookies.json").toString()));
 
 function ytdlmusic (url: string) {
   return ytdl(url, {
+    ...agent,
     filter: "audioonly",
     quality: "highestaudio",
     dlChunkSize: 0,
