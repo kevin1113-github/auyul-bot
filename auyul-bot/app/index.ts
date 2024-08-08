@@ -1272,6 +1272,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
     audioPlayer.on("error", (error) => {
       // console.error("Error:", error.message);
       console.error("Error:", error);
+      console.error("AudioResource:", error.resource);
       // 추가적인 오류 처리 로직
       audioPlayer.stop();
       guildData.isPlaying = false;
@@ -1283,6 +1284,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
         guildData.guildId
       );
       if (voiceConnection) {
+	console.log("음악 재생이 종료되었습니다.");
         voiceConnection.destroy();
       }
       if (guildData.timeOut) {
@@ -1330,6 +1332,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       connection.subscribe(audioPlayer);
     }
     const resource = ytdlAudioResource(guildData.playlist[index].music.url);
+    console.log(resource);
     guildData.audioPlayer.play(resource);
     guildData.isPlaying = true;
     guildData.playingIndex = index;
@@ -1402,6 +1405,7 @@ function playNext(guildData: T_GuildData) {
     guildData.playingTime = 0;
     guildData.audioPlayer?.stop();
     guildData.mainMessage?.edit(MainController);
+    console.log("음악 재생이 종료되었습니다.");
     getVoiceConnection(guildData.guildId)?.destroy();
   }
 }
@@ -1439,3 +1443,11 @@ async function clearMessages(channel: TextChannel) {
     }
   } while (fetchedMessages.size >= 2);
 }
+
+process.on('unhandledRejection', error => {
+    console.error('Unhandled promise rejection:', error);
+});
+
+
+
+
