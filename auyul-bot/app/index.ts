@@ -1332,8 +1332,19 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       connection.subscribe(audioPlayer);
     }
     const resource = ytdlAudioResource(guildData.playlist[index].music.url);
-    console.log(resource);
     guildData.audioPlayer.play(resource);
+    
+    
+    if (guildData.audioPlayer.checkPlayable() == false) {
+      console.log("재생할 수 없는 음악입니다.");
+      guildData.playlist.splice(index, 1);
+      audioPlayer.stop();
+      audioPlayer.state.status = AudioPlayerStatus.Idle;
+      getVoiceConnection(guildData.guildId)?.destroy();
+      return;
+    }
+    
+    
     guildData.isPlaying = true;
     guildData.playingIndex = index;
     guildData.playingTime = 0;
