@@ -77,7 +77,7 @@ import {
   T_UserPlaylist,
 } from "./types.js";
 import HttpServer from "./api.js";
-import { searchMusic } from "./youtube_music.js";
+import { searchMusic, searchMusicById } from "./youtube_music.js";
 import yts, { VideoMetadataResult } from "yt-search";
 import {
   DeleteConfirmMessage,
@@ -965,7 +965,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       interaction.customId === "searchAddMusicSelect"
     ) {
       const videoId: string = interaction.values[0];
-      const video: yts.VideoMetadataResult = await yts({ videoId: videoId });
+      const video: yts.VideoMetadataResult = await searchMusicById(videoId);
+      console.log(video);
 
       if (interaction.customId === "searchMusicSelect") {
         guildData.playlist.unshift({
@@ -1271,6 +1272,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
     });
     audioPlayer.on("error", (error) => {
       // console.error("Error:", error.message);
+      console.log("Error");
       console.error("Error:", error);
       console.error("AudioResource:", error.resource);
       // 추가적인 오류 처리 로직
@@ -1334,7 +1336,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
     const resource = ytdlAudioResource(guildData.playlist[index].music.url);
     guildData.audioPlayer.play(resource);
     
-    
+    /*
     if (guildData.audioPlayer.checkPlayable() == false) {
       console.log("재생할 수 없는 음악입니다.");
       guildData.playlist.splice(index, 1);
@@ -1343,7 +1345,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       getVoiceConnection(guildData.guildId)?.destroy();
       return;
     }
-    
+    */
     
     guildData.isPlaying = true;
     guildData.playingIndex = index;
@@ -1379,8 +1381,9 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       // 음악이 끝나면 다음 음악을 재생
       if (
         guildData.playingTime >=
-        guildData.playlist[guildData.playingIndex].music.seconds
+        guildData.playlist[guildData.playingIndex].music.duration.seconds
       ) {
+	console.log(guildData.playingTime, guildData.playlist[guildData.playingIndex].music.duration.seconds);
         playNext(guildData);
       }
     }, 1000);
@@ -1416,7 +1419,7 @@ function playNext(guildData: T_GuildData) {
     guildData.playingTime = 0;
     guildData.audioPlayer?.stop();
     guildData.mainMessage?.edit(MainController);
-    console.log("음악 재생이 종료되었습니다.");
+    console.log("모든 음악이 끝나 음악 재생이 종료되었습니다.");
     getVoiceConnection(guildData.guildId)?.destroy();
   }
 }
