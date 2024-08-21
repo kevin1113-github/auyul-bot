@@ -964,6 +964,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       interaction.customId === "searchMusicSelect" ||
       interaction.customId === "searchAddMusicSelect"
     ) {
+      await interaction.deferUpdate();
+
       const videoId: string = interaction.values[0];
       const video: yts.VideoMetadataResult = await searchMusicById(videoId);
       console.log(video);
@@ -980,9 +982,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         });
       }
 
-      await interaction.deferUpdate();
       await interaction.deleteReply();
-
       return;
     }
 
@@ -1337,6 +1337,15 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
     guildData.audioPlayer.play(resource);
     
     /*
+    (async function() {
+      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      await sleep(1000);
+    })();
+    */
+    
+    // console.log(guildData.playlist[guildData.playingIndex].music);
+    
+    /*
     if (guildData.audioPlayer.checkPlayable() == false) {
       console.log("재생할 수 없는 음악입니다.");
       guildData.playlist.splice(index, 1);
@@ -1366,7 +1375,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
         return;
       }
       guildData.playingTime += 1;
-      if (guildData.playingTime % 5 == 0) {
+      if (guildData.playingTime % 10 == 0) {
         guildData.mainMessage?.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
@@ -1381,9 +1390,9 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       // 음악이 끝나면 다음 음악을 재생
       if (
         guildData.playingTime >=
-        guildData.playlist[guildData.playingIndex].music.duration.seconds
+        guildData.playlist[guildData.playingIndex].music.seconds
       ) {
-	console.log(guildData.playingTime, guildData.playlist[guildData.playingIndex].music.duration.seconds);
+	console.log(guildData.playingTime, guildData.playlist[guildData.playingIndex].music.seconds);
         playNext(guildData);
       }
     }, 1000);
@@ -1457,6 +1466,14 @@ async function clearMessages(channel: TextChannel) {
     }
   } while (fetchedMessages.size >= 2);
 }
+
+/*
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+*/
 
 process.on('unhandledRejection', error => {
     console.error('Unhandled promise rejection:', error);
