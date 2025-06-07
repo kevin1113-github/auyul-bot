@@ -10,22 +10,22 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@discordjs/opus": "^0.9.0",
-    "@discordjs/voice": "^0.17.0",
-    "@distube/ytdl-core": "^4.14.4",
-    "discord.js": "^14.15.3",
-    "dotenv": "^16.4.5",
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.18.0",
+    "@distube/ytdl-core": "^4.16.11",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
     "ffmpeg-static": "^5.2.0",
-    "libsodium-wrappers": "^0.7.13",
-    "nodemon": "^3.1.0",
-    "sequelize": "^6.37.3",
+    "libsodium-wrappers": "^0.7.15",
+    "nodemon": "^3.1.10",
+    "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7",
-    "yt-search": "^2.11.1",
+    "yt-search": "^2.13.1",
     "ytdl-core": "^4.11.5"
   },
   "type": "module",
   "devDependencies": {
     "@types/yt-search": "^2.10.3",
-    "typescript": "^5.4.5"
+    "typescript": "^5.8.3"
   }
 }
