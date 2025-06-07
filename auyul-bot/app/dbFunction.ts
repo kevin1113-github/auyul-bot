@@ -68,7 +68,7 @@ export async function RegisterUserMsg(interaction: Message) {
   return;
 }
 
-export async function GetUserPlaylist(playlist: T_DATA): Promise<T_UserPlaylist> {
+export function GetUserPlaylist(playlist: T_DATA): T_UserPlaylist {
   const userPlaylist: T_UserPlaylist = {
     id: playlist.dataValues.id.toString(),
     user_id: playlist.dataValues.user_id,

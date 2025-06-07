@@ -29,9 +29,8 @@ class MainControllerMessage implements MessageInterface {
     .setThumbnail(
       "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true"
     )
-    .setTimestamp()
     .setFooter({
-      text: "아율봇",
+      text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
       iconURL:
         "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
     });
@@ -122,7 +121,7 @@ export class MainControllerPlayingMessage implements MessageInterface {
     this.playingTime = playingTime;
     this.isPlaying = isPlaying;
 
-    const barLength: number = 6;
+    const barLength: number = 10;
 
     const progressBar: number = Math.floor(
       (playingTime / playlist[playingIndex].music.seconds) * barLength
@@ -135,28 +134,27 @@ export class MainControllerPlayingMessage implements MessageInterface {
 
     this.mainMessageEmbed = new EmbedBuilder()
       .setColor("#ccbdb7")
-      .setTitle(`재생중: ${playlist[playingIndex].music.title}`)
+      .setTitle(`${playlist[playingIndex].music.title}`)
+      .setURL(`${playlist[playingIndex].music.url}`)
       .setDescription(
-        `게시자: ${playlist[playingIndex].music.author.name}\n길이: ${
+        `**[재생중인 음악 정보]**\n**채널**: [${
+          playlist[playingIndex].music.author.name
+        }](${playlist[playingIndex].music.author.url})\n**길이**: ${
           playlist[playingIndex].music.timestamp
-        }\n조회수: ${modifiedViews(
+        }\n**조회수**: ${modifiedViews(
           playlist[playingIndex].music.views
-        )}\n링크: [Link](${
-          // TODO: 조회수 m, k 단위로 변경
-          playlist[playingIndex].music.url
-        })\n추가자: <@${
+        )} Views\n**추가한 사람**: <@${
           playlist[playingIndex].play_user.id
-        }>\n[${playingTimeStr}] ${`⎯`.repeat(progressBar)}⦿${`⎯`.repeat(
+        }>\n[${playingTimeStr}] \`${`⎯`.repeat(progressBar)}⦿${`⎯`.repeat(
           progressBar <= barLength ? barLength - progressBar : 0
-        )} [${playlist[playingIndex].music.timestamp}]`
+        )}\` [${playlist[playingIndex].music.timestamp}]`
       )
       // .setTitle(`0:00 ━━━━●────────── 4:00`)
       // .setTitle(``)
       .setThumbnail(playlist[playingIndex].play_user.displayAvatarURL())
       .setImage(playlist[playingIndex].music.thumbnail)
-      .setTimestamp()
       .setFooter({
-        text: "아율봇",
+        text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
         iconURL:
           "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
       });
@@ -259,49 +257,47 @@ export class PlaylistMessage implements MessageInterface {
         .setTitle("현재 재생중인 목록입니다.")
         .setDescription(`재생중: ${this.playlist[playingIndex].music.title}`)
         .setThumbnail(this.playlist[playingIndex].music.thumbnail)
-        .addFields(
+        .setDescription(
           this.playlist
             .slice(
               pageIndex * 10,
               Math.min((pageIndex + 1) * 10, playlist.length)
             )
             .map((video, index) => {
-              return {
-                name: `${playingIndex == pageIndex * 10 + index ? "▶️ " : ""} ${
-                  pageIndex * 10 + index + 1
-                }. ${video.music.title}`,
-                value: `${
-                  playingIndex == pageIndex * 10 + index ? "▶️ " : ""
-                } 게시자: ${video.music.author.name} | 길이: ${
-                  video.music.timestamp
-                } | 조회수: ${modifiedViews(video.music.views)} | [링크](${
-                  video.music.url
-                }) | 추가자: <@${video.play_user.id}>`,
-              };
+              return `**${playingIndex == pageIndex * 10 + index ? "▶️ " : ""}${
+                pageIndex * 10 + index + 1
+              }. [${video.music.title}](${video.music.url}) (${
+                video.music.timestamp
+              })**${playingIndex == pageIndex * 10 + index ? "\n▶️ " : ""}[[${
+                video.music.author.name
+              }](${video.music.author.url}) | ${modifiedViews(
+                video.music.views
+              )} Views | <@${video.play_user.id}>]\n\n`;
             })
+            .join("")
         );
     } else {
-      this.playlistMessageEmbed.setTitle("재생목록입니다.").addFields(
+      this.playlistMessageEmbed.setTitle("재생목록입니다.").setDescription(
         this.playlist
           .slice(
             pageIndex * 10,
             Math.min((pageIndex + 1) * 10, playlist.length)
           )
           .map((video, index) => {
-            return {
-              name: `${pageIndex * 10 + index + 1}. ${video.music.title}`,
-              value: `게시자: ${video.music.author.name} | 길이: ${
-                video.music.timestamp
-              } | 조회수: ${modifiedViews(video.music.views)} | [링크](${
-                video.music.url
-              }) | 추가자: <@${video.play_user.id}>`,
-            };
+            return `**${pageIndex * 10 + index + 1}. [${video.music.title}](${
+              video.music.url
+            }) (${video.music.timestamp})**[[${video.music.author.name}](${
+              video.music.author.url
+            }) | ${modifiedViews(video.music.views)} Views | <@${
+              video.play_user.id
+            }>]\n\n`;
           })
+          .join("")
       );
     }
 
-    this.playlistMessageEmbed.setTimestamp().setFooter({
-      text: "아율봇",
+    this.playlistMessageEmbed.setFooter({
+      text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
       iconURL:
         "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
     });
@@ -331,7 +327,7 @@ export class PlaylistMessage implements MessageInterface {
 
     this.playButton = new ButtonBuilder()
       .setCustomId("playPlaylist")
-      .setLabel("처음부터 재생하기")
+      .setLabel("처음부터")
       .setStyle(ButtonStyle.Success)
       .setEmoji("1256636200157053009")
       .setDisabled(isPlaying || playlist.length === 0);
@@ -366,9 +362,8 @@ export class DeleteMusicMessage implements MessageInterface {
       .setColor("#ccbdb7")
       .setTitle("음악 삭제")
       .setDescription("삭제할 음악을 선택해주세요.")
-      .setTimestamp()
       .setFooter({
-        text: "아율봇",
+        text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
         iconURL:
           "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
       });
@@ -403,7 +398,8 @@ export class MyPlaylistListMessage implements MessageInterface {
   private actionRow2: ActionRowBuilder<ButtonBuilder>;
   private actionRow3: ActionRowBuilder<ButtonBuilder>;
   private selectMyPlaylistMenu: StringSelectMenuBuilder;
-  private addMyPlaylistButton: ButtonBuilder;
+  private addToMyPlaylistButton: ButtonBuilder;
+  private addMyEmptyPlaylistButton: ButtonBuilder;
   private deleteMyPlaylistButton: ButtonBuilder;
   private prevButton: ButtonBuilder;
   private currentPage: ButtonBuilder;
@@ -421,25 +417,23 @@ export class MyPlaylistListMessage implements MessageInterface {
     } else {
       this.myPlaylistListMessageEmbed
         .setTitle("내 플레이리스트 목록")
-        .addFields(
+        .setDescription(
           this.myPlaylistList
             .slice(
               pageIndex * 10,
               Math.min((pageIndex + 1) * 10, myPlaylistList.length)
             )
             .map((playlist: T_UserPlaylist, index) => {
-              return {
-                name: `${pageIndex * 10 + index + 1}. ${playlist.name}`,
-                value: `${playlist.playlist.length}곡 | 총 ${getTotalDuration(
-                  playlist
-                )}`,
-              };
+              return `**${pageIndex * 10 + index + 1}. ${playlist.name}**[${
+                playlist.playlist.length
+              }곡 | ${getTotalDuration(playlist)}]\n\n`;
             })
+            .join("")
         );
     }
 
-    this.myPlaylistListMessageEmbed.setTimestamp().setFooter({
-      text: "아율봇",
+    this.myPlaylistListMessageEmbed.setFooter({
+      text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
       iconURL:
         "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
     });
@@ -463,18 +457,24 @@ export class MyPlaylistListMessage implements MessageInterface {
       this.selectMyPlaylistMenu
     ) as ActionRowBuilder<StringSelectMenuBuilder>;
 
-    this.addMyPlaylistButton = new ButtonBuilder()
-      .setCustomId("addMyPlaylist")
-      .setLabel("플레이리스트 추가")
+    this.addToMyPlaylistButton = new ButtonBuilder()
+      .setCustomId("addToMyPlaylist")
+      .setLabel("가져오기")
+      .setStyle(ButtonStyle.Success)
+      .setEmoji("🔖");
+    this.addMyEmptyPlaylistButton = new ButtonBuilder()
+      .setCustomId("addMyEmptyPlaylist")
+      .setLabel("추가")
       .setStyle(ButtonStyle.Success)
       .setEmoji("➕");
     this.deleteMyPlaylistButton = new ButtonBuilder()
       .setCustomId("deleteMyPlaylist")
-      .setLabel("플레이리스트 삭제")
+      .setLabel("삭제")
       .setStyle(ButtonStyle.Danger)
       .setEmoji("🗑️");
     this.actionRow2 = new ActionRowBuilder().addComponents(
-      this.addMyPlaylistButton,
+      this.addToMyPlaylistButton,
+      this.addMyEmptyPlaylistButton,
       this.deleteMyPlaylistButton
     ) as ActionRowBuilder<ButtonBuilder>;
 
@@ -531,9 +531,8 @@ export class DeleteMyPlaylistMessage implements MessageInterface {
       .setColor("#ccbdb7")
       .setTitle("플레이리스트 삭제")
       .setDescription("삭제할 플레이리스트를 선택해주세요.")
-      .setTimestamp()
       .setFooter({
-        text: "아율봇",
+        text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
         iconURL:
           "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
       });
@@ -567,15 +566,17 @@ export class DeleteMyPlaylistMessage implements MessageInterface {
 export class MyPlaylistMessage implements MessageInterface {
   private myPlaylist: T_UserPlaylist;
   private myPlaylistMessageEmbed: EmbedBuilder;
-  private actionRow1: ActionRowBuilder<StringSelectMenuBuilder>;
+  private actionRow1: ActionRowBuilder<ButtonBuilder>;
   private actionRow2: ActionRowBuilder<ButtonBuilder>;
   private actionRow3: ActionRowBuilder<ButtonBuilder>;
-  private selectMyPlaylistMusicMenu: StringSelectMenuBuilder;
+  // private selectMyPlaylistMusicMenu: StringSelectMenuBuilder;
+  private playMyPlaylistButton: ButtonBuilder;
   private addMyPlaylistMusicButton: ButtonBuilder;
   private deleteMyPlaylistMusicButton: ButtonBuilder;
   private prevButton: ButtonBuilder;
   private currentPage: ButtonBuilder;
   private nextButton: ButtonBuilder;
+  private backButton: ButtonBuilder;
 
   constructor(myPlaylist: T_UserPlaylist, page: number | null = null) {
     const pageIndex: number = page ?? 0;
@@ -584,60 +585,68 @@ export class MyPlaylistMessage implements MessageInterface {
 
     if (myPlaylist.playlist.length === 0) {
       this.myPlaylistMessageEmbed
-        .setTitle(`플레이리스트 '${myPlaylist.name}'이(가) 비어있습니다.`)
+        .setTitle(`'${myPlaylist.name}' 플레이리스트가 비어있습니다.`)
         .setDescription("음악을 추가해주세요.");
     } else {
       this.myPlaylistMessageEmbed
-        .setTitle(`플레이리스트 ${myPlaylist.name}`)
+        .setTitle(`${myPlaylist.name}`)
         .setDescription(
-          `${myPlaylist.playlist.length}곡 | 총 ${getTotalDuration(myPlaylist)}`
-        )
-        .setThumbnail(this.myPlaylist.playlist[0].thumbnail)
-        .addFields(
-          this.myPlaylist.playlist
-            .slice(
-              pageIndex * 10,
-              Math.min((pageIndex + 1) * 10, myPlaylist.playlist.length)
-            )
-            .map((video, index) => {
-              return {
-                name: `${pageIndex * 10 + index + 1}. ${video.title}`,
-                value: `${video.author.name} | ${
-                  video.timestamp
-                } | 조회수: ${modifiedViews(video.views)} | [링크](${
+          `[플레이리스트 정보]\n${myPlaylist.playlist.length}곡 | 총 ${getTotalDuration(
+            myPlaylist
+          )}\n\n` +
+            this.myPlaylist.playlist
+              .slice(
+                pageIndex * 10,
+                Math.min((pageIndex + 1) * 10, myPlaylist.playlist.length)
+              )
+              .map((video, index) => {
+                return `**${pageIndex * 10 + index + 1}. [${video.title}](${
                   video.url
-                })`,
-              };
-            })
-        );
+                }) (${video.timestamp})**[[${video.author.name}](${
+                  video.author.url
+                }) | ${modifiedViews(video.views)} Views]\n\n`;
+              })
+              .join("")
+        )
+        .setThumbnail(this.myPlaylist.playlist[0].thumbnail);
     }
 
-    this.myPlaylistMessageEmbed.setTimestamp().setFooter({
-      text: "아율봇",
+    this.myPlaylistMessageEmbed.setFooter({
+      text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
       iconURL:
         "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
     });
 
-    this.selectMyPlaylistMusicMenu = new StringSelectMenuBuilder()
-      .setCustomId("selectMyPlaylistMusic" + myPlaylist.id)
-      .setPlaceholder("음악을 선택해주세요.")
-      .addOptions(
-        this.myPlaylist.playlist
-          .slice(
-            pageIndex * 10,
-            Math.min((pageIndex + 1) * 10, myPlaylist.playlist.length)
-          )
-          .map((video: VideoMetadataResult, index) => {
-            return new StringSelectMenuOptionBuilder()
-              .setLabel(video.title)
-              .setValue(video.videoId);
-          })
-      )
-      // .setDisabled(myPlaylist.playlist.length === 0); // TODO: 해야함.
-      .setDisabled(true);
+    // this.selectMyPlaylistMusicMenu = new StringSelectMenuBuilder()
+    //   .setCustomId("selectMyPlaylistMusic" + myPlaylist.id)
+    //   .setPlaceholder("음악을 선택해주세요.")
+    //   .addOptions(
+    //     this.myPlaylist.playlist
+    //       .slice(
+    //         pageIndex * 10,
+    //         Math.min((pageIndex + 1) * 10, myPlaylist.playlist.length)
+    //       )
+    //       .map((video: VideoMetadataResult, index) => {
+    //         return new StringSelectMenuOptionBuilder()
+    //           .setLabel(video.title)
+    //           .setValue(video.videoId);
+    //       })
+    //   )
+    //   // .setDisabled(myPlaylist.playlist.length === 0); // TODO: 해야함.
+    //   .setDisabled(true);
+    // this.actionRow1 = new ActionRowBuilder().addComponents(
+    //   this.selectMyPlaylistMusicMenu
+    // ) as ActionRowBuilder<StringSelectMenuBuilder>;
+
+    this.playMyPlaylistButton = new ButtonBuilder()
+      .setCustomId("playMyPlaylist" + myPlaylist.id)
+      .setLabel("이 플레이리스트 재생")
+      .setStyle(ButtonStyle.Success)
+      .setEmoji("1256636200157053009")
+      .setDisabled(myPlaylist.playlist.length === 0);
     this.actionRow1 = new ActionRowBuilder().addComponents(
-      this.selectMyPlaylistMusicMenu
-    ) as ActionRowBuilder<StringSelectMenuBuilder>;
+      this.playMyPlaylistButton
+    ) as ActionRowBuilder<ButtonBuilder>;
 
     this.addMyPlaylistMusicButton = new ButtonBuilder()
       .setCustomId("addMyPlaylistMusic" + myPlaylist.id)
@@ -646,11 +655,11 @@ export class MyPlaylistMessage implements MessageInterface {
       .setEmoji("➕");
     this.deleteMyPlaylistMusicButton = new ButtonBuilder()
       .setCustomId("deleteMyPlaylistMusic" + myPlaylist.id)
-      .setLabel("음악 삭제(준비중)")
+      .setLabel("음악 삭제")
       .setStyle(ButtonStyle.Danger)
       .setEmoji("🗑️")
-      // .setDisabled(myPlaylist.playlist.length === 0); // TODO: 해야함.
-      .setDisabled(true);
+      .setDisabled(myPlaylist.playlist.length === 0); // TODO: 해야함.
+    // .setDisabled(true);
     this.actionRow2 = new ActionRowBuilder().addComponents(
       this.addMyPlaylistMusicButton,
       this.deleteMyPlaylistMusicButton
@@ -673,17 +682,21 @@ export class MyPlaylistMessage implements MessageInterface {
       .setStyle(ButtonStyle.Primary)
       .setEmoji("1256654986176106539")
       .setDisabled((pageIndex + 1) * 10 >= myPlaylist.playlist.length);
+    this.backButton = new ButtonBuilder()
+      .setCustomId("backToPlaylistList")
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji("🔙")
     this.actionRow3 = new ActionRowBuilder().addComponents(
       this.prevButton,
       this.currentPage,
-      this.nextButton
+      this.nextButton,
+      this.backButton,
     ) as ActionRowBuilder<ButtonBuilder>;
   }
 
   private getComponents() {
     const components = [];
-    if (this.selectMyPlaylistMusicMenu.options.length > 0)
-      components.push(this.actionRow1);
+    components.push(this.actionRow1);
     components.push(this.actionRow2);
     components.push(this.actionRow3);
     return components;
@@ -783,9 +796,8 @@ export class EmptyEmbedMessage implements MessageInterface {
 //       .setTitle("음악 추가")
 //       .setDescription(`플레이리스트 '${myPlaylist.name}'에 '${music.title}'을(를) 추가하시겠습니까?`)
 //       .setThumbnail(music.thumbnail)
-//       .setTimestamp()
 //       .setFooter({
-//         text: "아율봇",
+//         text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
 //         iconURL:
 //         "https://github.com/kevin1113-github/auyul-bot/blob/master/auyul-profile.png?raw=true",
 //       });
@@ -815,7 +827,9 @@ function getTotalDuration(playlist: T_UserPlaylist) {
 
 function getTimeFormat(playingTime: number, endTime: number): string {
   if (endTime < 3600) {
-    return `${Math.floor(playingTime / 60)}:${playingTime % 60}`;
+    const minutes: number = Math.floor(playingTime / 60);
+    const seconds: number = playingTime % 60;
+    return `${minutes}:${seconds < 10 ? "0" + seconds : seconds}`;
   } else {
     const hours: number = Math.floor(playingTime / 3600);
     const minutes: number = Math.floor((playingTime % 3600) / 60);

@@ -24,7 +24,6 @@ import {
   StringSelectMenuComponent,
   AnyComponentBuilder,
   APIActionRowComponent,
-  APIMessageActionRowComponent,
   APISelectMenuComponent,
   ButtonBuilder,
   EmbedBuilder,
@@ -44,6 +43,8 @@ import {
   TextChannel,
   GuildChannel,
   GuildChannelCreateOptions,
+  MessageFlags,
+  ChatInputCommandInteraction,
 } from "discord.js";
 import {
   getVoiceConnection,
@@ -90,7 +91,6 @@ import {
   MyPlaylistMessage,
   PlaylistMessage,
 } from "./Messages.js";
-import ytdl from "ytdl-core";
 import { ytdlAudioResource } from "./ytdl.js";
 
 const guildDataList: T_GuildData[] = [];
@@ -130,11 +130,13 @@ client.once(Events.ClientReady, async () => {
     }
 
     // 메인 메세지 전송
-    const commandChannel = (await (
-      await client.channels.fetch(server.dataValues.commandChannel)
-    )?.fetch()) as TextBasedChannel;
-    await clearMessages(commandChannel as TextChannel);
-    const mainMessage = await commandChannel.send(MainController);
+    const commandChannel = (await client.channels.fetch(
+      server.dataValues.commandChannel
+    )) as TextChannel;
+    await clearMessages(commandChannel);
+    const mainMessage: Message<true> = await commandChannel.send(
+      MainController
+    );
 
     const playlist: T_GuildPlaylist[] = [];
     const guildData: T_GuildData = {
@@ -147,7 +149,8 @@ client.once(Events.ClientReady, async () => {
       isPlaying: false,
       isRepeat: false,
       timeOut: null,
-      mainMessage: mainMessage || null,
+      mainMessage: mainMessage,
+      voiceChannel: null,
     };
     guildDataList.push(guildData);
   }
@@ -182,29 +185,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  // get guild data
-  let guildData: T_GuildData | undefined = guildDataList.find(
-    (data) => data.guildId == interaction.guildId
-  );
-  if (!guildData) {
-    guildData = {
-      guildId: interaction.guildId,
-      audioPlayer: null,
-      action: new Action(interaction),
-      playlist: [],
-      playingIndex: 0,
-      playingTime: 0,
-      isPlaying: false,
-      isRepeat: false,
-      timeOut: null,
-      mainMessage: null,
-    } as T_GuildData;
-
-    guildDataList.push(guildData);
-  } else {
-    guildData.action.setInteraction(interaction);
-  }
-
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "채널생성") {
       const channelName: string =
@@ -217,7 +197,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (!newChannel) {
         await interaction.reply({
           content: `채널 생성에 실패했습니다.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -225,17 +205,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await server.update({ commandChannel: newChannel.id });
       await interaction.reply({
         content: `<#${newChannel.id}> 채널이 명령어 채널로 생성되었습니다.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
-      if (guildData.mainMessage) {
-        await guildData.mainMessage.delete();
+      const prevGuildData: T_GuildData | undefined = guildDataList.find(
+        (data) => data.guildId == interaction.guild?.id
+      );
+      if (prevGuildData && prevGuildData.mainMessage) {
+        await prevGuildData.mainMessage.delete();
       }
+
+      const guildData: T_GuildData =
+        prevGuildData || (await findGuildData(server));
 
       // 메인 메세지 전송
       const commandChannel = (await (
         await interaction.guild?.channels.fetch(newChannel.id)
-      )?.fetch()) as TextBasedChannel;
-      await clearMessages(commandChannel as TextChannel);
+      )?.fetch()) as TextChannel;
+      await clearMessages(commandChannel);
       const mainMessage = await commandChannel.send(MainController);
       guildData.mainMessage = mainMessage;
 
@@ -247,7 +233,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (!channel || channel.type != ChannelType.GuildText) {
         await interaction.reply({
           content: `텍스트 채널을 선택해주세요.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -255,29 +241,41 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await server.update({ commandChannel: channel.id });
       await interaction.reply({
         content: `<#${channel.id}> 채널이 명령어 채널로 설정되었습니다.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
-      if (guildData.mainMessage) {
-        await guildData.mainMessage.delete();
+      const prevGuildData: T_GuildData | undefined = guildDataList.find(
+        (data) => data.guildId == interaction.guild?.id
+      );
+      if (prevGuildData && prevGuildData.mainMessage) {
+        await prevGuildData.mainMessage.delete();
       }
+
+      const guildData: T_GuildData =
+        prevGuildData || (await findGuildData(server));
 
       // 메인 메세지 전송
       const commandChannel = (await (
         await interaction.guild?.channels.fetch(channel.id)
-      )?.fetch()) as TextBasedChannel;
-      await clearMessages(commandChannel as TextChannel);
+      )?.fetch()) as TextChannel;
+      await clearMessages(commandChannel);
       const mainMessage = await commandChannel.send(MainController);
       guildData.mainMessage = mainMessage;
 
       return;
     }
+  }
 
+  // get guild data
+  const guildData: T_GuildData = await findGuildData(server);
+  guildData.action.setInteraction(interaction);
+
+  if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "채널해제") {
       const channelId = server.dataValues.commandChannel;
       if (!channelId) {
         await interaction.reply({
           content: `명령어 채널이 설정되지 않았습니다.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -285,7 +283,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await server.update({ commandChannel: null });
       await interaction.reply({
         content: `명령어 채널이 해제되었습니다.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -294,7 +292,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!server.dataValues.commandChannel) {
       await interaction.reply({
         content: `명령어 채널이 설정되지 않았습니다. 명령어 채널을 설정해주세요.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -309,39 +307,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
             )
           )?.name
         }] 채널에서 사용해주세요.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
-      return;
-    }
-
-    // if (interaction.commandName === "들어와") {
-    //   // 새로운 오디오 플레이어로 접속
-    //   const audioPlayer = createAudioPlayer({
-    //     behaviors: {
-    //       noSubscriber: NoSubscriberBehavior.Pause,
-    //     },
-    //   });
-    //   guildData.audioPlayer = audioPlayer;
-    //   await guildData.action.joinVoiceChannel(audioPlayer);
-    //   return;
-    // }
-
-    if (interaction.commandName === "main") {
-      // await guildData.mainInteraction?
-      await interaction.reply({ content: "메인 메세지 출력", ephemeral: true });
-      if (guildData.mainMessage) {
-        await guildData.mainMessage.delete();
-      }
-
-      // 메인 메세지 전송
-      const commandChannel = (await (
-        await interaction.guild?.channels.fetch(
-          server.dataValues.commandChannel
-        )
-      )?.fetch()) as TextBasedChannel;
-      await clearMessages(commandChannel as TextChannel);
-      const mainMessage = await commandChannel.send(MainController);
-      guildData.mainMessage = mainMessage;
       return;
     }
 
@@ -353,14 +320,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     // if (interaction.commandName === "리모컨") {
     //   let remoteLink: string = "리모컨 웹 페이지 링크: ";
-    //   await interaction.reply({ content: remoteLink, ephemeral: true });
+    //   await interaction.reply({ content: remoteLink, flags: MessageFlags.Ephemeral, });
     //   return;
     // }
 
     // if (interaction.commandName === "도움말") {
     //   await interaction.reply({
     //     content: `도움말 준비중입니다.`,
-    //     ephemeral: true,
+    //     flags: MessageFlags.Ephemeral,
     //   });
     //   return;
     // }
@@ -372,7 +339,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     //   if (result.length == 0) {
     //     await interaction.reply({
     //       content: `검색 결과가 없습니다.`,
-    //       ephemeral: true,
+    //       flags: MessageFlags.Ephemeral,
     //     });
     //     return;
     //   }
@@ -420,7 +387,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     //       0,
     //       guildData.isPlaying
     //     ).getMessage(),
-    //     ephemeral: true,
+    //     flags: MessageFlags.Ephemeral,
     //   });
 
     //   return;
@@ -429,7 +396,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // 슬래시 커맨드 사용시 아무 응답을 하지 않았을 경우 오류 응답 처리
     await interaction.reply({
       content: `명령어를 찾을 수 없습니다. 개발자에게 문의해주세요.`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -446,7 +413,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (result.length == 0) {
         await interaction.reply({
           content: `검색 결과가 없습니다.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -460,9 +427,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
           )
           .setPlaceholder("선택해주세요.")
           .addOptions(
-            result.map((v: yts.VideoSearchResult) => {
+            result.map((v: yts.VideoSearchResult, i: number) => {
               return new StringSelectMenuOptionBuilder()
-                .setLabel(v.title.substring(0, 100))
+                .setLabel(`${i + 1}. ${v.title}`.substring(0, 100))
                 .setDescription(
                   v.author.name +
                     " | " +
@@ -483,7 +450,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         ...new EmptyEmbedMessage(`재생 할 음악을 선택해주세요.`, [
           musicSelectActionRow,
         ]).getMessage(),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
 
       return;
@@ -505,7 +472,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         } else {
           await interaction.reply({
             content: `플레이리스트를 찾을 수 없습니다.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -522,7 +489,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         } else {
           await interaction.reply({
             content: `검색 결과가 없습니다.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -533,9 +500,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
           .setCustomId("myPlaylistMusicSearchSelect" + playlistId)
           .setPlaceholder("선택해주세요.")
           .addOptions(
-            result.map((v: yts.VideoSearchResult) => {
+            result.map((v: yts.VideoSearchResult, i: number) => {
               return new StringSelectMenuOptionBuilder()
-                .setLabel(v.title)
+                .setLabel(`${i + 1}. ${v.title}`.substring(0, 100))
                 .setDescription(
                   v.author.name +
                     " | " +
@@ -564,19 +531,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.reply({
           content: `플레이리스트 '${playlist.dataValues.name}'에 추가 할 음악을 선택해주세요.`,
           components: [musicSelectActionRow],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       return;
     }
 
-    if (interaction.customId === "addMyPlaylistModal") {
+    if (interaction.customId === "addToMyPlaylistModal") {
       const playlistName: string = interaction.fields.getTextInputValue(
         "myPlaylistNameInput"
       );
 
-      const createdPlaylist = await UserPlaylist.create({
+      await UserPlaylist.create({
         user_id: interaction.user.id,
         name: playlistName,
         playlist: guildData.playlist.map((v) => v.music),
@@ -591,7 +558,33 @@ client.on(Events.InteractionCreate, async (interaction) => {
       } else {
         await interaction.reply({
           content: `플레이리스트 '${playlistName}'이(가) 추가되었습니다.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
+
+    if (interaction.customId === "addMyEmptyPlaylistModal") {
+      const playlistName: string = interaction.fields.getTextInputValue(
+        "myPlaylistNameInput"
+      );
+
+      await UserPlaylist.create({
+        user_id: interaction.user.id,
+        name: playlistName,
+        playlist: [],
+      });
+
+      if (interaction.isFromMessage()) {
+        await interaction.update(
+          new EmptyEmbedMessage(
+            `플레이리스트 '${playlistName}'이(가) 추가되었습니다.`
+          ).getMessage()
+        );
+      } else {
+        await interaction.reply({
+          content: `플레이리스트 '${playlistName}'이(가) 추가되었습니다.`,
+          flags: MessageFlags.Ephemeral,
         });
       }
       return;
@@ -607,14 +600,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
           guildData.playingIndex,
           guildData.isPlaying
         ).getMessage(),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     if (interaction.customId === "playPlaylist") {
       await interaction.deferUpdate();
-      playMusic(guildData);
+      const voiceChannel: VoiceBasedChannel | null = (
+        interaction.member as GuildMember
+      ).voice.channel;
+      if (voiceChannel) {
+        guildData.voiceChannel = voiceChannel;
+        playMusic(guildData);
+      } else {
+        // 음성채널에 없음.
+      }
       await interaction.deleteReply();
     }
 
@@ -625,12 +626,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const myPlaylist: T_UserPlaylist[] = [];
       for (const playlist of playlists) {
-        myPlaylist.push(await GetUserPlaylist(playlist));
+        myPlaylist.push(GetUserPlaylist(playlist));
       }
 
       interaction.reply({
         ...new MyPlaylistListMessage(myPlaylist, 0).getMessage(),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -638,7 +639,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.customId === "popular") {
       await interaction.reply({
         content: `인기 차트 버튼 클릭`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -684,7 +685,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.customId === "selectRecentMusic") {
       await interaction.reply({
         content: `최근 재생 내역 선택`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -713,22 +714,59 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    if (interaction.customId === "addMyPlaylist") {
-      const addMyPlaylistModal = new ModalBuilder()
-        .setCustomId("addMyPlaylistModal")
-        .setTitle("새로운 내 플레이리스트 추가");
+    if (interaction.customId.startsWith("backToPlaylistList")) {
+      const playlists: T_DATA[] = await UserPlaylist.findAll({
+        where: { user_id: interaction.user.id },
+      });
+
+      const myPlaylist: T_UserPlaylist[] = [];
+      for (const playlist of playlists) {
+        myPlaylist.push(GetUserPlaylist(playlist));
+      }
+
+      await interaction.update({
+        ...new MyPlaylistListMessage(myPlaylist, 0).getMessage(),
+      });
+      return;
+    }
+
+    if (interaction.customId === "addToMyPlaylist") {
+      const addToMyPlaylistModal = new ModalBuilder()
+        .setCustomId("addToMyPlaylistModal")
+        .setTitle("플레이리스트 가져오기");
 
       const myPlaylistNameInput: TextInputBuilder = new TextInputBuilder()
         .setCustomId("myPlaylistNameInput")
-        .setLabel("새로운 플레이리스트 이름을 입력해주세요")
+        .setLabel("현재 재생 목록을 새로운 플레이리스트에 저장합니다.")
+        .setPlaceholder("새로운 플레이리스트 이름")
         .setStyle(TextInputStyle.Short);
       const addMyPlaylistInputActionRow: ActionRowBuilder<TextInputBuilder> =
         new ActionRowBuilder().addComponents(
           myPlaylistNameInput
         ) as ActionRowBuilder<TextInputBuilder>;
-      addMyPlaylistModal.addComponents(addMyPlaylistInputActionRow);
+      addToMyPlaylistModal.addComponents(addMyPlaylistInputActionRow);
 
-      await interaction.showModal(addMyPlaylistModal);
+      await interaction.showModal(addToMyPlaylistModal);
+      return;
+    }
+
+    if (interaction.customId === "addMyEmptyPlaylist") {
+      const addMyEmptyPlaylistModal = new ModalBuilder()
+        .setCustomId("addMyEmptyPlaylistModal")
+        .setTitle("빈 플레이리스트 추가");
+
+      const myPlaylistNameInput: TextInputBuilder = new TextInputBuilder()
+        .setCustomId("myPlaylistNameInput")
+        .setLabel("새로운 비어있는 플레이리스트를 만듭니다.")
+        .setPlaceholder("새로운 플레이리스트 이름")
+        .setStyle(TextInputStyle.Short);
+      const addMyPlaylistInputActionRow: ActionRowBuilder<TextInputBuilder> =
+        new ActionRowBuilder().addComponents(
+          myPlaylistNameInput
+        ) as ActionRowBuilder<TextInputBuilder>;
+      addMyEmptyPlaylistModal.addComponents(addMyPlaylistInputActionRow);
+
+      await interaction.showModal(addMyEmptyPlaylistModal);
       return;
     }
 
@@ -739,7 +777,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const myPlaylist: T_UserPlaylist[] = [];
       for (const playlist of playlists) {
-        myPlaylist.push(await GetUserPlaylist(playlist));
+        myPlaylist.push(GetUserPlaylist(playlist));
       }
 
       if (myPlaylist.length == 0) {
@@ -769,19 +807,65 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
 
       await playlist.destroy();
+
+      const playlistList: T_UserPlaylist[] = (await UserPlaylist.findAll({
+        where: { user_id: interaction.user.id }
+      })).map((playlist: T_DATA):T_UserPlaylist => { return GetUserPlaylist(playlist) })
       await interaction.update(
-        new EmptyEmbedMessage(`플레이리스트가 삭제되었습니다.`).getMessage()
+        // new EmptyEmbedMessage(`플레이리스트가 삭제되었습니다.`).getMessage()
+        new MyPlaylistListMessage(playlistList, 0).getMessage()
       );
       return;
     }
 
     if (interaction.customId === "deleteMyPlaylistCancel") {
+      const playlistList: T_UserPlaylist[] = (await UserPlaylist.findAll({
+        where: { user_id: interaction.user.id }
+      })).map((playlist: T_DATA):T_UserPlaylist => { return GetUserPlaylist(playlist) })
       await interaction.update(
-        new EmptyEmbedMessage(
-          `플레이리스트 삭제를 취소하였습니다.`
-        ).getMessage()
+        // new EmptyEmbedMessage(`플레이리스트가 삭제되었습니다.`).getMessage()
+        new MyPlaylistListMessage(playlistList, 0).getMessage()
       );
+      // await interaction.update(
+      //   new EmptyEmbedMessage(
+      //     `플레이리스트 삭제를 취소하였습니다.`
+      //   ).getMessage()
+      // );
       return;
+    }
+
+    if (interaction.customId.startsWith("playMyPlaylist")) {
+      await interaction.deferUpdate();
+      const playlistId: string = interaction.customId.substring(14);
+      const playlist: T_DATA | null = await UserPlaylist.findOne({
+        where: { id: playlistId },
+      });
+
+      if (!playlist) {
+        await interaction.update(
+          new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
+        );
+        return;
+      }
+
+      guildData.playlist = (
+        playlist.dataValues.playlist as VideoMetadataResult[]
+      ).map((video) => {
+        return { music: video, play_user: interaction.user } as T_GuildPlaylist;
+      });
+      guildData.playingIndex = 0;
+      guildData.playingTime = 0;
+
+      const voiceChannel: VoiceBasedChannel | null = (
+        interaction.member as GuildMember
+      ).voice.channel;
+      if (voiceChannel) {
+        guildData.voiceChannel = voiceChannel;
+        playMusic(guildData);
+      } else {
+        // 음성채널에 없음.
+      }
+      await interaction.deleteReply();
     }
 
     if (interaction.customId.startsWith("addMyPlaylistMusic")) {
@@ -815,12 +899,59 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
+    if (interaction.customId.startsWith("deleteMyPlaylistMusic")) {
+      const playlistId: string = interaction.customId.substring(21);
+      const playlist: T_DATA | null = await UserPlaylist.findOne({
+        where: { id: playlistId },
+      });
+
+      if (!playlist) {
+        await interaction.update(
+          new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
+        );
+        return;
+      }
+
+      const userPlayList: VideoMetadataResult[] = playlist.dataValues.playlist;
+
+      const musicSelectMenu: StringSelectMenuBuilder =
+        new StringSelectMenuBuilder()
+          .setCustomId("deleteMyPlaylistMusicSelect" + playlistId)
+          .setPlaceholder("음악을 선택해주세요.")
+          .addOptions(
+            userPlayList.map((v: VideoMetadataResult, index: number) => {
+              return new StringSelectMenuOptionBuilder()
+                .setLabel(`${index + 1}. ${v.title}`.substring(0, 100))
+                .setDescription(
+                  v.author.name +
+                    " | " +
+                    v.timestamp +
+                    " | 조회수: " +
+                    v.views +
+                    "회"
+                )
+                .setValue(index.toString());
+            })
+          );
+
+      const musicSelectActionRow: ActionRowBuilder<StringSelectMenuBuilder> =
+        new ActionRowBuilder().addComponents(
+          musicSelectMenu
+        ) as ActionRowBuilder<StringSelectMenuBuilder>;
+      await interaction.update({
+        ...new EmptyEmbedMessage(`삭제할 음악을 선택해주세요.`, [
+          musicSelectActionRow,
+        ]).getMessage(),
+      });
+      return;
+    }
+
     // 플레이어 컨트롤러
     if (interaction.customId === "repeatMusic") {
       await interaction.deferUpdate();
 
       guildData.isRepeat = true;
-      guildData.mainMessage?.edit(
+      guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -836,7 +967,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       guildData.isRepeat = false;
-      guildData.mainMessage?.edit(
+      guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -856,7 +987,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       guildData.playingIndex = 0;
       guildData.playingTime = 0;
       guildData.audioPlayer = null;
-      guildData.mainMessage?.edit(MainController);
+      guildData.mainMessage.edit(MainController);
       const voiceConnection: VoiceConnection | undefined = getVoiceConnection(
         guildData.guildId
       );
@@ -874,7 +1005,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       guildData.audioPlayer?.pause();
       guildData.isPlaying = false;
-      guildData.mainMessage?.edit(
+      guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -891,7 +1022,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       guildData.audioPlayer?.unpause();
       guildData.isPlaying = true;
-      guildData.mainMessage?.edit(
+      guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -914,7 +1045,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         guildData.audioPlayer?.play(resource);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
-        guildData.mainMessage?.edit(
+        guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
             guildData.playingIndex,
@@ -938,7 +1069,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         guildData.audioPlayer?.play(resource);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
-        guildData.mainMessage?.edit(
+        guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
             guildData.playingIndex,
@@ -987,13 +1118,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.customId.startsWith("myPlaylistMusicSearchSelect")) {
+      await interaction.deferUpdate();
+
       const playlistId: string = interaction.customId.substring(27);
       const playlist: T_DATA | null = await UserPlaylist.findOne({
         where: { id: playlistId },
       });
 
       if (!playlist) {
-        await interaction.update(
+        await interaction.editReply(
           new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
         );
         return;
@@ -1001,15 +1134,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const videoId: string = interaction.values[0];
       const video: yts.VideoMetadataResult = await yts({ videoId: videoId });
-      await interaction.update(
-        new EmptyEmbedMessage(
-          `플레이리스트 '${playlist.dataValues.name}'에 추가한 음악: ${video.url}`
-        ).getMessage()
-      );
 
       await playlist.update({
         playlist: [...playlist.dataValues.playlist, video],
       });
+
+      await interaction.editReply(
+        // new EmptyEmbedMessage(
+        //   `플레이리스트 '${playlist.dataValues.name}'에 추가한 음악: ${video.url}`
+        // ).getMessage()
+        new MyPlaylistMessage(GetUserPlaylist(playlist), 0).getMessage()
+      );
       return;
     }
 
@@ -1027,10 +1162,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
 
       await interaction.update({
-        ...new MyPlaylistMessage(
-          await GetUserPlaylist(playlist),
-          0
-        ).getMessage(),
+        ...new MyPlaylistMessage(GetUserPlaylist(playlist), 0).getMessage(),
       });
       return;
     }
@@ -1049,9 +1181,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
 
       await interaction.update({
-        ...new DeleteConfirmMessage(
-          await GetUserPlaylist(playlist)
-        ).getMessage(),
+        ...new DeleteConfirmMessage(GetUserPlaylist(playlist)).getMessage(),
       });
       return;
     }
@@ -1076,90 +1206,101 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
       guildData.playlist.splice(index, 1);
     }
+
+    if (interaction.customId.startsWith("deleteMyPlaylistMusicSelect")) {
+      const index: number = parseInt(interaction.values[0]);
+      const playlistId: string = interaction.customId.substring(27);
+      const userPlaylist: T_DATA | null = await UserPlaylist.findOne({
+        where: { id: playlistId },
+      });
+
+      if (!userPlaylist) {
+        await interaction.update(
+          new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
+        );
+        return;
+      }
+
+      const videos: VideoMetadataResult[] = [
+        ...userPlaylist.dataValues.playlist,
+      ];
+      videos.splice(index, 1);
+
+      await userPlaylist.update({
+        playlist: videos,
+      });
+      await interaction.update(
+        // new EmptyEmbedMessage(`음악을 삭제했습니다.`).getMessage()
+        new MyPlaylistMessage(GetUserPlaylist(userPlaylist), 0).getMessage()
+      );
+      return;
+    }
   }
 });
 
-// When bot received message.
-client.on(Events.MessageCreate, async (message) => {
-  if (!message.guildId) {
-    return;
-  }
+// // When bot received message.
+// client.on(Events.MessageCreate, async (message) => {
+//   if (!message.guildId) {
+//     return;
+//   }
 
-  // get server data
-  const server: T_DATA | null = await Servers.findOne({
-    where: { id: message.guildId },
-  });
-  if (!server) {
-    console.error("서버가 등록되지 않았습니다.");
-    return;
-  }
+//   // get server data
+//   const server: T_DATA | null = await Servers.findOne({
+//     where: { id: message.guildId },
+//   });
+//   if (!server) {
+//     console.error("서버가 등록되지 않았습니다.");
+//     return;
+//   }
 
-  // dev mode
-  if (DEV_MODE && server.dataValues.id != "1233212899862908938") {
-    return;
-  }
+//   // dev mode
+//   if (DEV_MODE && server.dataValues.id != "1233212899862908938") {
+//     return;
+//   }
 
-  // get guild data
-  let guildData: T_GuildData | undefined = guildDataList.find(
-    (data) => data.guildId == message.guildId
-  );
-  if (!guildData) {
-    guildData = {
-      guildId: message.guildId,
-      audioPlayer: null,
-      action: new Action(),
-      playlist: [],
-      playingIndex: 0,
-      playingTime: 0,
-      isPlaying: false,
-      isRepeat: false,
-      timeOut: null,
-      mainMessage: null,
-    } as T_GuildData;
+//   // get guild data
+//   let guildData: T_GuildData = await findGuildData(server);
 
-    guildDataList.push(guildData);
-  }
+//   if (message.author.bot) {
+//     return;
+//   }
 
-  if (message.author.bot) {
-    return;
-  }
+//   if (message.channelId != server.dataValues.commandChannel) {
+//     return;
+//   }
 
-  if (message.channelId != server.dataValues.commandChannel) {
-    return;
-  }
+//   guildData.action.setInteraction(message);
 
-  guildData.action.setInteraction(message);
+//   // delete message
+//   await message.delete();
 
-  // delete message
-  await message.delete();
+//   // search music
+//   const keyword: string = message.content;
+//   const result: yts.VideoSearchResult = (await searchMusic(keyword))[0];
+//   const video: yts.VideoMetadataResult = await yts({ videoId: result.videoId });
 
-  // search music
-  const keyword: string = message.content;
-  const result: yts.VideoSearchResult = (await searchMusic(keyword))[0];
-  const video: yts.VideoMetadataResult = await yts({ videoId: result.videoId });
+//   // add music to playlist
+//   guildData.playlist.push({
+//     music: video,
+//     play_user: message.author,
+//   });
 
-  // add music to playlist
-  guildData.playlist.push({
-    music: video,
-    play_user: message.author,
-  });
+//   // // join voice channel
+//   // if (!guildData.audioPlayer) {
+//   //   const audioPlayer = createAudioPlayer({
+//   //     behaviors: {
+//   //       noSubscriber: NoSubscriberBehavior.Pause,
+//   //     },
+//   //   });
+//   //   guildData.audioPlayer = audioPlayer;
+//   //   await guildData.action.joinVoiceChannel(audioPlayer);
+//   // }
 
-  // // join voice channel
-  // if (!guildData.audioPlayer) {
-  //   const audioPlayer = createAudioPlayer({
-  //     behaviors: {
-  //       noSubscriber: NoSubscriberBehavior.Pause,
-  //     },
-  //   });
-  //   guildData.audioPlayer = audioPlayer;
-  //   await guildData.action.joinVoiceChannel(audioPlayer);
-  // }
-
-  // play music
-  if (!guildData.isPlaying) {
-    playMusic(guildData, guildData.playlist.length - 1);
-  }
-});
+//   // play music
+//   if (!guildData.isPlaying) {
+//     playMusic(guildData, guildData.playlist.length - 1);
+//   }
+// });
 
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   if (!oldState.guild) {
@@ -1198,7 +1339,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
         guildData.isPlaying = false;
         guildData.playingIndex = 0;
         guildData.playingTime = 0;
-        guildData.mainMessage?.edit(MainController);
+        guildData.mainMessage.edit(MainController);
         if (guildData.timeOut) {
           clearInterval(guildData.timeOut);
         }
@@ -1238,7 +1379,15 @@ eventify_push(guildDataList, (list: T_GuildData[], guildData: T_GuildData) => {
   eventify_unshift(
     guildData.playlist,
     (list: T_GuildPlaylist[], music: T_GuildPlaylist) => {
-      playMusic(guildData);
+      const voiceChannel: VoiceBasedChannel | null = (
+        guildData.action.interaction?.member as GuildMember
+      ).voice.channel;
+      if (voiceChannel) {
+        guildData.voiceChannel = voiceChannel;
+        playMusic(guildData);
+      } else {
+        // 음성채널에 없음.
+      }
     }
   );
 
@@ -1247,7 +1396,7 @@ eventify_push(guildDataList, (list: T_GuildData[], guildData: T_GuildData) => {
     guildData.playlist,
     (list: T_GuildPlaylist[], music: T_GuildPlaylist) => {
       if (guildData.isPlaying) {
-        guildData.mainMessage?.edit(
+        guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
             guildData.playingIndex,
@@ -1263,6 +1412,8 @@ eventify_push(guildDataList, (list: T_GuildData[], guildData: T_GuildData) => {
 
 // playlist 재생
 function playMusic(guildData: T_GuildData, index: number = 0) {
+  const voiceChannel: VoiceBasedChannel | null = guildData.voiceChannel;
+  if (!voiceChannel) return; // 음성 채널에 접속되어 있지 않을 경우 재생하지 않음
   if (guildData.playlist.length > 0) {
     // play added music which is first music
     const audioPlayer = createAudioPlayer({
@@ -1281,12 +1432,12 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       guildData.playingIndex = 0;
       guildData.playingTime = 0;
       guildData.audioPlayer = null;
-      guildData.mainMessage?.edit(MainController);
+      guildData.mainMessage.edit(MainController);
       const voiceConnection: VoiceConnection | undefined = getVoiceConnection(
         guildData.guildId
       );
       if (voiceConnection) {
-	console.log("음악 재생이 종료되었습니다.");
+        console.log("음악 재생이 종료되었습니다.");
         voiceConnection.destroy();
       }
       if (guildData.timeOut) {
@@ -1294,14 +1445,6 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       }
     });
     guildData.audioPlayer = audioPlayer;
-    const voiceChannel: VoiceBasedChannel | null = (
-      guildData.action.interaction?.member as GuildMember
-    ).voice.channel;
-    // 음성 채널에 접속되어 있지 않을 경우
-    // 재생하지 않고 플리에 추가만 함
-    if (!voiceChannel || !guildData.mainMessage) {
-      return;
-    }
     const voiceConnection: VoiceConnection | undefined = getVoiceConnection(
       guildData.guildId
     );
@@ -1335,16 +1478,16 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
     }
     const resource = ytdlAudioResource(guildData.playlist[index].music.url);
     guildData.audioPlayer.play(resource);
-    
+
     /*
     (async function() {
       const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       await sleep(1000);
     })();
     */
-    
+
     // console.log(guildData.playlist[guildData.playingIndex].music);
-    
+
     /*
     if (guildData.audioPlayer.checkPlayable() == false) {
       console.log("재생할 수 없는 음악입니다.");
@@ -1355,10 +1498,12 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       return;
     }
     */
-    
+
     guildData.isPlaying = true;
     guildData.playingIndex = index;
     guildData.playingTime = 0;
+
+    console.log(guildData.mainMessage);
 
     guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
@@ -1376,7 +1521,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       }
       guildData.playingTime += 1;
       if (guildData.playingTime % 10 == 0) {
-        guildData.mainMessage?.edit(
+        guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
             guildData.playingIndex,
@@ -1392,7 +1537,10 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
         guildData.playingTime >=
         guildData.playlist[guildData.playingIndex].music.seconds
       ) {
-	console.log(guildData.playingTime, guildData.playlist[guildData.playingIndex].music.seconds);
+        console.log(
+          guildData.playingTime,
+          guildData.playlist[guildData.playingIndex].music.seconds
+        );
         playNext(guildData);
       }
     }, 1000);
@@ -1409,6 +1557,15 @@ function playNext(guildData: T_GuildData) {
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
+    guildData.mainMessage.edit(
+      new MainControllerPlayingMessage(
+        guildData.playlist,
+        guildData.playingIndex,
+        guildData.playingTime,
+        guildData.isPlaying,
+        guildData.isRepeat
+      ).getMessage()
+    );
   }
   // 반복 재생이 아니고 마지막 음악이 아닐 경우
   else if (guildData.playingIndex + 1 < guildData.playlist.length) {
@@ -1417,6 +1574,15 @@ function playNext(guildData: T_GuildData) {
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
+    guildData.mainMessage.edit(
+      new MainControllerPlayingMessage(
+        guildData.playlist,
+        guildData.playingIndex,
+        guildData.playingTime,
+        guildData.isPlaying,
+        guildData.isRepeat
+      ).getMessage()
+    );
   }
   // 반복 재생이 아니고 마지막 음악일 경우
   else {
@@ -1427,8 +1593,8 @@ function playNext(guildData: T_GuildData) {
     guildData.playingIndex = 0;
     guildData.playingTime = 0;
     guildData.audioPlayer?.stop();
-    guildData.mainMessage?.edit(MainController);
-    console.log("모든 음악이 끝나 음악 재생이 종료되었습니다.");
+    guildData.mainMessage.edit(MainController);
+    // console.log("모든 음악이 끝나 음악 재생이 종료되었습니다.");
     getVoiceConnection(guildData.guildId)?.destroy();
   }
 }
@@ -1475,10 +1641,60 @@ function sleep(ms: number) {
 }
 */
 
-process.on('unhandledRejection', error => {
-    console.error('Unhandled promise rejection:', error);
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled promise rejection:", error);
 });
 
+// async function createMainMessage(guildData: T_GuildData, server: T_DATA)
+// {
+//   if (guildData.mainMessage) {
+//     await guildData.mainMessage.delete();
+//   }
 
+//   // 메인 메세지 전송
+//   const commandChannel = (await (
+//     await client.guilds.fetch(guildData.guildId) .guild?.channels.fetch(
+//       server.dataValues.commandChannel
+//     )
+//   )?.fetch()) as TextChannel;
 
+//   const
+//   await clearMessages(commandChannel);
+//   const mainMessage = await commandChannel.send(MainController);
+//   guildData.mainMessage = mainMessage;
+//   return;
+// }
 
+async function findGuildData(server: T_DATA): Promise<T_GuildData> {
+  const guildId: string = server.dataValues.id;
+  const commandChannelId: string = server.dataValues.commandChannel;
+  return (
+    guildDataList.find((data) => data.guildId == guildId) ||
+    (await (async () => {
+      const commandChannel = (await client.channels.fetch(
+        commandChannelId
+      )) as TextChannel;
+      await clearMessages(commandChannel);
+      const mainMessage: Message<true> = await commandChannel.send(
+        MainController
+      );
+
+      const newGuildData = {
+        guildId: guildId,
+        audioPlayer: null,
+        action: new Action(),
+        playlist: [],
+        playingIndex: 0,
+        playingTime: 0,
+        isPlaying: false,
+        isRepeat: false,
+        timeOut: null,
+        mainMessage: mainMessage,
+        voiceChannel: null,
+      } as T_GuildData;
+
+      guildDataList.push(newGuildData);
+      return newGuildData;
+    })())
+  );
+}

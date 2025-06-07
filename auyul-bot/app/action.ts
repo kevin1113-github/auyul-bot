@@ -91,7 +91,7 @@ export default class Action {
 	// 	if(this.isReplied) {
 	// 		await this.send(msg, isBlockQuote, isEphemeral);
 	// 	} else {
-	// 		if (this.interaction instanceof ChatInputCommandInteraction) await this.interaction.reply({ content: msg, ephemeral: isEphemeral });
+	// 		if (this.interaction instanceof ChatInputCommandInteraction) await this.interaction.reply({ content: msg, flags: MessageFlags.Ephemeral, });
 	// 		else await this.interaction.reply(msg);
 	// 		this.isReplied = true;
 	// 	}

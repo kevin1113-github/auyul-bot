@@ -22,7 +22,7 @@ export default class HttpServer {
       const commandChannel = server.dataValues.commandChannel;
       if (commandChannel) {
         this.client.channels.fetch(commandChannel).then((channel) => {
-          if (channel?.isTextBased()) {
+          if (channel?.isSendable()) {
             try {
               channel.send({ embeds: [data] });
             } catch (error) {
