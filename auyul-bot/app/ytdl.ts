@@ -30,9 +30,13 @@ function waitForStreamReady(stream: Readable): Promise<void> {
 
 async function streamFromYtDlp(url: string): Promise<Readable> {
   const ytdlp = spawn("yt-dlp", [
-    "-f", "bestaudio",
-    "-o", "-",
-    "--cookies", cookiePath,
+    "--verbose",
+    "-f",
+    "bestaudio",
+    "-o",
+    "-",
+    "--cookies",
+    cookiePath,
     url,
   ]);
 
