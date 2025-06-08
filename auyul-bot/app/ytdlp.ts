@@ -23,6 +23,8 @@ function waitForStreamReady(stream: Readable): Promise<void> {
   });
 }
 
+let currentYtDlp: ReturnType<typeof spawn> | null = null;
+
 function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readable } {
   const yt = spawn("yt-dlp", [
     "--force-ipv4",
@@ -35,8 +37,10 @@ function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readab
     url,
   ]);
 
+  currentYtDlp = yt;
   return { yt, output: yt.stdout };
 }
+
 
 // 전역에서 ffmpeg 프로세스를 관리하도록 export
 let currentFfmpeg: ReturnType<typeof spawn> | null = null;
@@ -55,13 +59,24 @@ function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
   return { ffmpeg, output: ffmpeg.stdout };
 }
 
-export function stopCurrentFfmpeg() {
+function stopCurrentYtDlp() {
+  if (currentYtDlp && !currentYtDlp.killed) {
+    currentYtDlp.kill("SIGKILL");
+    currentYtDlp = null;
+  }
+}
+
+function stopCurrentFfmpeg() {
   if (currentFfmpeg && !currentFfmpeg.killed) {
     currentFfmpeg.kill("SIGKILL");
     currentFfmpeg = null;
   }
 }
 
+export function stopCurrentProcesses() {
+  stopCurrentFfmpeg();
+  stopCurrentYtDlp();
+}
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
   const { yt, output: ytStream } = spawnYtDlp(url);
