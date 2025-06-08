@@ -1168,7 +1168,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
 
       if (!playlist) {
-        await interaction.editReply(
+        await interaction.update(
           new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
         );
         return;
@@ -1181,9 +1181,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         playlist: [...playlist.dataValues.playlist, video],
       });
 
-      await interaction.editReply(
-        new MyPlaylistMessage(GetUserPlaylist(playlist), 0).getMessage()
-      );
+      await interaction.update({
+        ...new MyPlaylistMessage(GetUserPlaylist(playlist), 0).getMessage()
+      });
       return;
     }
 
