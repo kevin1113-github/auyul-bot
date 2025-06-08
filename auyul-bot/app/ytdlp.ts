@@ -23,7 +23,7 @@ function waitForStreamReady(stream: Readable): Promise<void> {
   });
 }
 
-function spawnYtDlp(url: string): Readable {
+function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readable } {
   const yt = spawn("yt-dlp", [
     "--force-ipv4",
     "--limit-rate", "500K",
@@ -35,7 +35,7 @@ function spawnYtDlp(url: string): Readable {
     url,
   ]);
 
-  return yt.stdout;
+  return { yt, output: yt.stdout };
 }
 
 function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
@@ -52,8 +52,22 @@ function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
 }
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
-  const ytStream = spawnYtDlp(url);
+  const { yt, output: ytStream } = spawnYtDlp(url);
   const { ffmpeg, output } = spawnFfmpeg();
+
+  ytStream.on("error", (err) => {
+    console.error("[yt-dlp] 오류 발생:", err);
+  });
+  ffmpeg.on("error", (err) => {
+    console.error("[ffmpeg] 오류 발생:", err);
+  });
+
+  yt.stderr?.on("data", (data) => {
+    console.error("[yt-dlp stderr]:", data.toString());
+  });
+  ffmpeg.stderr?.on("data", (data) => {
+    console.error("[ffmpeg stderr]:", data.toString());
+  });
 
   ytStream.pipe(ffmpeg.stdin!);
   return output;
