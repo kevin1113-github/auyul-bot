@@ -82,21 +82,20 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
   const { yt, output: ytStream } = spawnYtDlp(url);
   const { ffmpeg, output } = spawnFfmpeg();
 
+  let errored = false;
+
   ytStream.on("error", (err) => {
+    errored = true;
     console.error("[yt-dlp] 오류 발생:", err);
     yt.kill("SIGKILL");
     ffmpeg.kill("SIGKILL");
   });
 
   ffmpeg.on("error", (err) => {
+    errored = true;
     console.error("[ffmpeg] 오류 발생:", err);
     yt.kill("SIGKILL");
-  });
-
-  ffmpeg.on("close", (code) => {
-    if (code !== 0) {
-      console.error(`[ffmpeg] 종료 코드 ${code}`);
-    }
+    ffmpeg.kill("SIGKILL");
   });
 
   yt.stderr?.on("data", (data) => {
@@ -108,18 +107,35 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
   });
 
   try {
-    // Pipe 전에 writable 상태 확인
     if (!ffmpeg.stdin || ffmpeg.stdin.destroyed || !ffmpeg.stdin.writable) {
-      yt.kill("SIGKILL");
-      ffmpeg.kill("SIGKILL");
       throw new Error("FFmpeg stdin이 유효하지 않아 스트리밍을 시작할 수 없습니다.");
     }
 
-    ytStream.pipe(ffmpeg.stdin);
-  } catch (e) {
+    // 수동으로 데이터 흐름 처리
+    for await (const chunk of ytStream) {
+      try {
+        if (!ffmpeg.stdin.writable) {
+          throw new Error("FFmpeg stdin이 이미 닫혔습니다.");
+        }
+        const canWrite = ffmpeg.stdin.write(chunk);
+        if (!canWrite) {
+          await new Promise((resolve) => ffmpeg.stdin?.once("drain", resolve));
+        }
+      } catch (err) {
+        console.error("[파이프 수동 전송 실패]:", err);
+        yt.kill("SIGKILL");
+        ffmpeg.kill("SIGKILL");
+        throw err;
+      }
+    }
+
+    // 끝났으면 stdin 종료
+    ffmpeg.stdin.end();
+
+  } catch (err) {
     yt.kill("SIGKILL");
     ffmpeg.kill("SIGKILL");
-    throw e;
+    throw err;
   }
 
   return output;
