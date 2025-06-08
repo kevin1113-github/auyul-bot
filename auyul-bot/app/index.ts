@@ -1448,10 +1448,6 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
       },
     });
     audioPlayer.on("error", (error) => {
-      // console.error("Error:", error.message);
-      console.log("Error");
-      console.error("Error:", error);
-      console.error("AudioResource:", error.resource);
       // 추가적인 오류 처리 로직
       audioPlayer.stop();
       guildData.isPlaying = false;
@@ -1502,34 +1498,25 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
       );
       connection.subscribe(audioPlayer);
     }
+    
+    guildData.isPlaying = false;
+    guildData.playingIndex = index;
+    guildData.playingTime = 0;
+    await guildData.mainMessage.edit(
+      new MainControllerPlayingMessage(
+        guildData.playlist,
+        guildData.playingIndex,
+        guildData.playingTime,
+        guildData.isPlaying,
+        guildData.isRepeat
+      ).getMessage()
+    );
     const resource = await ytDlpAudioResource(guildData.playlist[index].music.url);
     guildData.audioPlayer.play(resource);
-
-    /*
-    (async function() {
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      await sleep(1000);
-    })();
-    */
-
-    // console.log(guildData.playlist[guildData.playingIndex].music);
-
-    /*
-    if (guildData.audioPlayer.checkPlayable() == false) {
-      console.log("재생할 수 없는 음악입니다.");
-      guildData.playlist.splice(index, 1);
-      audioPlayer.stop();
-      audioPlayer.state.status = AudioPlayerStatus.Idle;
-      getVoiceConnection(guildData.guildId)?.destroy();
-      return;
-    }
-    */
 
     guildData.isPlaying = true;
     guildData.playingIndex = index;
     guildData.playingTime = 0;
-
-    console.log(guildData.mainMessage);
 
     guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
