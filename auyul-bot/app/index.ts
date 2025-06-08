@@ -91,7 +91,7 @@ import {
   MyPlaylistMessage,
   PlaylistMessage,
 } from "./Messages.js";
-import { ytDlpAudioResource } from "./ytdl.js";
+import { ytDlpAudioResource } from "./ytdlp.js";
 
 const guildDataList: T_GuildData[] = [];
 
