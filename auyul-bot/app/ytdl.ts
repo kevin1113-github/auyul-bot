@@ -22,12 +22,17 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
   ]);
 
   const ffmpeg = spawn("ffmpeg", [
+    "-loglevel", "debug", // 디버깅 로그 추가
     "-i", "pipe:0",       // yt-dlp의 stdout
     "-f", "s16le",        // 리니어 PCM
     "-ar", "48000",       // Discord용 표준 샘플레이트
     "-ac", "2",           // 스테레오
     "pipe:1",             // ffmpeg의 stdout
   ], { stdio: ["pipe", "pipe", "ignore"] });
+
+  (ffmpeg.stderr as unknown as NodeJS.ReadableStream).on("data", (data) => {
+    console.error("🔧 ffmpeg:", data.toString());
+  });
 
   yt.stdout.pipe(ffmpeg.stdin);
 
