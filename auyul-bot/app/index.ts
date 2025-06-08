@@ -1461,6 +1461,7 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
     );
     guildData.audioPlayer.play(resource);
     await waitForStreamReady(resource.playStream);
+    guildData.audioPlayer.play(resource);
 
     guildData.isPlaying = true;
     guildData.playingIndex = index;
@@ -1498,10 +1499,6 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
         guildData.playingTime >=
         guildData.playlist[guildData.playingIndex].music.seconds
       ) {
-        console.log(
-          guildData.playingTime,
-          guildData.playlist[guildData.playingIndex].music.seconds
-        );
         autoPlayNext(guildData);
       }
     }, 1000);
