@@ -45,6 +45,6 @@ async function streamYtDlp(url: string): Promise<Readable> {
 
 export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
   const stream = await streamYtDlp(url);
-  await waitForStreamReady(stream);
+  // await waitForStreamReady(stream);
   return createAudioResource(stream);
 }

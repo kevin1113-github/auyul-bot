@@ -1228,10 +1228,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const index: number = parseInt(interaction.values[0]);
 
-      // if (guildData.playlist.length == 0 && index == 0) {
-
-      // }
-
       if (guildData.playingIndex == index) {
         if (guildData.isPlaying) {
           autoPlayNext(guildData);
@@ -1273,70 +1269,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 });
-
-// // When bot received message.
-// client.on(Events.MessageCreate, async (message) => {
-//   if (!message.guildId) {
-//     return;
-//   }
-
-//   // get server data
-//   const server: T_DATA | null = await Servers.findOne({
-//     where: { id: message.guildId },
-//   });
-//   if (!server) {
-//     console.error("서버가 등록되지 않았습니다.");
-//     return;
-//   }
-
-//   // dev mode
-//   if (DEV_MODE && server.dataValues.id != "1233212899862908938") {
-//     return;
-//   }
-
-//   // get guild data
-//   let guildData: T_GuildData = await findGuildData(server);
-
-//   if (message.author.bot) {
-//     return;
-//   }
-
-//   if (message.channelId != server.dataValues.commandChannel) {
-//     return;
-//   }
-
-//   guildData.action.setInteraction(message);
-
-//   // delete message
-//   await message.delete();
-
-//   // search music
-//   const keyword: string = message.content;
-//   const result: yts.VideoSearchResult = (await searchMusic(keyword))[0];
-//   const video: yts.VideoMetadataResult = await yts({ videoId: result.videoId });
-
-//   // add music to playlist
-//   guildData.playlist.push({
-//     music: video,
-//     play_user: message.author,
-//   });
-
-//   // // join voice channel
-//   // if (!guildData.audioPlayer) {
-//   //   const audioPlayer = createAudioPlayer({
-//   //     behaviors: {
-//   //       noSubscriber: NoSubscriberBehavior.Pause,
-//   //     },
-//   //   });
-//   //   guildData.audioPlayer = audioPlayer;
-//   //   await guildData.action.joinVoiceChannel(audioPlayer);
-//   // }
-
-//   // play music
-//   if (!guildData.isPlaying) {
-//     playMusic(guildData, guildData.playlist.length - 1);
-//   }
-// });
 
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   if (!oldState.guild) {
