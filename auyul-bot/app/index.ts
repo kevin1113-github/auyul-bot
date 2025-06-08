@@ -1459,8 +1459,8 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[index].music.url
     );
+    audioPlayer.play(resource);
     await waitForStreamReady(resource.playStream);
-    guildData.audioPlayer.play(resource);
 
     guildData.isPlaying = true;
     guildData.playingIndex = index;
