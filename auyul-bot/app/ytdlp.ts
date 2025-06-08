@@ -96,7 +96,12 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
     console.error("[ffmpeg stderr]:", data.toString());
   });
 
-  ytStream.pipe(ffmpeg.stdin!);
+  if (ffmpeg.stdin && !ffmpeg.stdin.destroyed) {
+    ytStream.pipe(ffmpeg.stdin);
+  } else {
+    yt.kill("SIGKILL");
+    throw new Error("FFmpeg stdin이 이미 종료되어 스트리밍을 시작할 수 없습니다.");
+  }
   return output;
 }
 
