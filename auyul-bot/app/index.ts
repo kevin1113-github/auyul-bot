@@ -91,7 +91,7 @@ import {
   MyPlaylistMessage,
   PlaylistMessage,
 } from "./Messages.js";
-import { ytDlpAudioResource, stopCurrentProcesses  } from "./ytdlp.js";
+import { ytDlpAudioResource } from "./ytdlp.js";
 
 const guildDataList: T_GuildData[] = [];
 
@@ -1039,7 +1039,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex > 0) {
         guildData.audioPlayer?.stop(true);
-        stopCurrentProcesses();
 
         guildData.playingIndex -= 1;
         const resource = await ytDlpAudioResource(
@@ -1066,7 +1065,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex < guildData.playlist.length - 1) {
         guildData.audioPlayer?.stop(true);
-        stopCurrentProcesses();
 
         guildData.playingIndex += 1;
         const resource = await ytDlpAudioResource(
