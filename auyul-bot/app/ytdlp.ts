@@ -23,7 +23,7 @@ function waitForStreamReady(stream: Readable): Promise<void> {
   });
 }
 
-function spawnYtDlpStream(url: string): Readable {
+function spawnYtDlp(url: string): Readable {
   const yt = spawn("yt-dlp", [
     "--force-ipv4",
     "--limit-rate", "500K",
@@ -35,17 +35,35 @@ function spawnYtDlpStream(url: string): Readable {
     url,
   ]);
 
-  yt.stderr.on("data", () => {});
-  yt.on("error", () => {});
-
   return yt.stdout;
 }
 
+function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
+  const ffmpeg = spawn("ffmpeg", [
+    "-loglevel", "error",
+    "-i", "pipe:0",
+    "-f", "s16le",
+    "-ar", "48000",
+    "-ac", "2",
+    "pipe:1",
+  ]);
+
+  return { ffmpeg, output: ffmpeg.stdout };
+}
+
+async function streamWithFfmpeg(url: string): Promise<Readable> {
+  const ytStream = spawnYtDlp(url);
+  const { ffmpeg, output } = spawnFfmpeg();
+
+  ytStream.pipe(ffmpeg.stdin!);
+  return output;
+}
+
 export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
-  const stream = spawnYtDlpStream(url);
+  const stream = await streamWithFfmpeg(url);
   await waitForStreamReady(stream);
   return createAudioResource(stream, {
-    inputType: StreamType.WebmOpus,
+    inputType: StreamType.Raw,
     inlineVolume: true,
   });
 }
