@@ -92,6 +92,8 @@ const mainControllerMessage = new MainControllerMessage();
 export const MainController = mainControllerMessage.getMessage();
 
 export class MainControllerPlayingMessage implements MessageInterface {
+  private isLoding: boolean;
+
   private playlist: T_GuildPlaylist[];
   private playingIndex: number;
   private playingTime: number;
@@ -114,12 +116,14 @@ export class MainControllerPlayingMessage implements MessageInterface {
     playingIndex: number,
     playingTime: number,
     isPlaying: boolean,
-    isRepeat: boolean
+    isRepeat: boolean,
+    isLoding: boolean = false
   ) {
     this.playlist = playlist;
     this.playingIndex = playingIndex;
     this.playingTime = playingTime;
     this.isPlaying = isPlaying;
+    this.isLoding = isLoding;
 
     const barLength: number = 10;
 
@@ -151,7 +155,7 @@ export class MainControllerPlayingMessage implements MessageInterface {
       )
       // .setTitle(`0:00 ━━━━●────────── 4:00`)
       // .setTitle(``)
-      .setThumbnail(playlist[playingIndex].play_user.displayAvatarURL())
+      .setThumbnail(isLoding ? "https://github.com/kevin1113-github/auyul-bot/blob/master/loading.gif?raw=true" : playlist[playingIndex].play_user.displayAvatarURL())
       .setImage(playlist[playingIndex].music.thumbnail)
       .setFooter({
         text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
