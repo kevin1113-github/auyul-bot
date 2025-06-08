@@ -31,11 +31,11 @@ import { Readable } from "stream";
 import fs from "fs";
 
 // yt-dlp 실행 인자 세팅
-const cookies = JSON.parse(fs.readFileSync("cookies.json").toString());
+// const cookies = JSON.parse(fs.readFileSync("cookies.json").toString());
 const cookiePath = "./cookies.txt";
 
 // 쿠키 파일 생성 (yt-dlp는 파일 형식 쿠키만 지원)
-fs.writeFileSync(cookiePath, cookies.map((c: any) => `${c.name}=${c.value}`).join("; "));
+// fs.writeFileSync(cookiePath, cookies.map((c: any) => `${c.name}=${c.value}`).join("; "));
 
 function streamFromYtDlp(url: string): Readable {
   const ytdlp = spawn("yt-dlp", [
