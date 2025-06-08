@@ -31,6 +31,7 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
     "--no-playlist",
     "-f", "bestaudio[ext=webm]/bestaudio",
     "-o", "-",
+    "--cookies", cookiePath,
     url
   ]);
 
