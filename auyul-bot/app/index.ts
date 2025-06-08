@@ -91,7 +91,7 @@ import {
   MyPlaylistMessage,
   PlaylistMessage,
 } from "./Messages.js";
-import { ytdlAudioResource } from "./ytdl.js";
+import { ytDlpAudioResource } from "./ytdl.js";
 
 const guildDataList: T_GuildData[] = [];
 
@@ -1039,7 +1039,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex > 0) {
         guildData.playingIndex -= 1;
-        const resource = ytdlAudioResource(
+        const resource = ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
@@ -1063,7 +1063,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex < guildData.playlist.length - 1) {
         guildData.playingIndex += 1;
-        const resource = ytdlAudioResource(
+        const resource = ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
@@ -1476,7 +1476,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       );
       connection.subscribe(audioPlayer);
     }
-    const resource = ytdlAudioResource(guildData.playlist[index].music.url);
+    const resource = ytDlpAudioResource(guildData.playlist[index].music.url);
     guildData.audioPlayer.play(resource);
 
     /*
@@ -1553,7 +1553,7 @@ function playNext(guildData: T_GuildData) {
 
   // 반복 재생일 경우
   if (guildData.isRepeat) {
-    const resource = ytdlAudioResource(
+    const resource = ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
@@ -1570,7 +1570,7 @@ function playNext(guildData: T_GuildData) {
   // 반복 재생이 아니고 마지막 음악이 아닐 경우
   else if (guildData.playingIndex + 1 < guildData.playlist.length) {
     guildData.playingIndex += 1;
-    const resource = ytdlAudioResource(
+    const resource = ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
