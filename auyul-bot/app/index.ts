@@ -1180,7 +1180,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await playlist.update({
         playlist: [...playlist.dataValues.playlist, video],
       });
-sdf
+
       await interaction.editReply(
         new MyPlaylistMessage(GetUserPlaylist(playlist), 0).getMessage()
       );
