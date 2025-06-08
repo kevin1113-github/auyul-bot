@@ -28,7 +28,7 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
     "-ar", "48000",       // Discord용 표준 샘플레이트
     "-ac", "2",           // 스테레오
     "pipe:1",             // ffmpeg의 stdout
-  ], { stdio: ["pipe", "pipe", "ignore"] });
+  ], { stdio: ["pipe", "pipe", "pipe"] });
 
   (ffmpeg.stderr as unknown as NodeJS.ReadableStream).on("data", (data) => {
     console.error("🔧 ffmpeg:", data.toString());
