@@ -1038,7 +1038,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       if (guildData.playingIndex > 0) {
-        guildData.audioPlayer?.stop(true);
+        guildData.audioPlayer?.stop();
 
         guildData.playingIndex -= 1;
         const resource = await ytDlpAudioResource(
@@ -1064,7 +1064,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       if (guildData.playingIndex < guildData.playlist.length - 1) {
-        guildData.audioPlayer?.stop(true);
+        guildData.audioPlayer?.stop();
 
         guildData.playingIndex += 1;
         const resource = await ytDlpAudioResource(

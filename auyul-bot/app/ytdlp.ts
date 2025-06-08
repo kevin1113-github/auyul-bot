@@ -1,27 +1,9 @@
 // ytdl.ts
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import { AudioResource, createAudioResource, StreamType } from "@discordjs/voice";
+import { AudioResource, createAudioResource } from "@discordjs/voice";
 
 const cookiePath = "./cookies.txt";
-
-function waitForStreamReady(stream: Readable): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error("Stream timed out waiting for data")), 10000);
-    stream.once("data", () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-    stream.once("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-    stream.once("end", () => {
-      clearTimeout(timeout);
-      reject(new Error("Stream ended before receiving data"));
-    });
-  });
-}
 
 function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readable } {
   const yt = spawn("yt-dlp", [
@@ -38,27 +20,6 @@ function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readab
   return { yt, output: yt.stdout };
 }
 
-function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
-  const ffmpeg = spawn("ffmpeg", [
-    "-loglevel", "error",
-    "-i", "pipe:0",
-    "-f", "s16le",
-    "-ar", "48000",
-    "-ac", "2",
-    "pipe:1",
-  ]);
-
-  return { ffmpeg, output: ffmpeg.stdout };
-}
-
-async function streamWithFfmpeg(url: string): Promise<Readable> {
-  const { yt, output: ytStream } = spawnYtDlp(url);
-  const { ffmpeg, output } = spawnFfmpeg();
-  if (ffmpeg.stdin) ytStream.pipe(ffmpeg.stdin);
-
-  return output;
-}
-
 async function streamYtDlp(url: string): Promise<Readable> {
   const { yt, output: ytStream } = spawnYtDlp(url);
   return ytStream;
@@ -66,10 +27,5 @@ async function streamYtDlp(url: string): Promise<Readable> {
 
 export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
   const stream = await streamYtDlp(url);
-  // const stream = await streamWithFfmpeg(url);
-  // await waitForStreamReady(stream);
-  // return createAudioResource(stream, {
-  //   inputType: StreamType.Raw,
-  // });
   return createAudioResource(stream);
 }
