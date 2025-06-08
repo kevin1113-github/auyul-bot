@@ -23,9 +23,9 @@ const Commands: SlashCommandOptionsOnlyBuilder[] = [
       option.setName("채널이름").setDescription("생성할 채널 이름").setRequired(false)
     ),
 
-  new SlashCommandBuilder()
-    .setName("채널해제")
-    .setDescription("명령어 채널을 해제합니다."),
+  // new SlashCommandBuilder()
+  //   .setName("채널해제")
+  //   .setDescription("명령어 채널을 해제합니다."),
 
   // new SlashCommandBuilder()
   //   .setName("리모컨")
