@@ -1158,15 +1158,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.customId.startsWith("myPlaylistMusicSearchSelect")) {
-      await interaction.deferUpdate();
-
       const playlistId: string = interaction.customId.substring(27);
       const playlist: T_DATA | null = await UserPlaylist.findOne({
         where: { id: playlistId },
       });
 
       if (!playlist) {
-        await interaction.editReply(
+        await interaction.update(
           new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
         );
         return;
@@ -1179,7 +1177,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         playlist: [...playlist.dataValues.playlist, video],
       });
 
-      await interaction.editReply(
+      await interaction.update(
         // new EmptyEmbedMessage(
         //   `플레이리스트 '${playlist.dataValues.name}'에 추가한 음악: ${video.url}`
         // ).getMessage()
