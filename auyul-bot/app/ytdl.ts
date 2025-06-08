@@ -25,10 +25,13 @@ function waitForStreamReady(stream: Readable): Promise<void> {
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
   const yt = spawn("yt-dlp", [
+    "--force-ipv4",
+    "--limit-rate", "500K",
+    "--retries", "5",
+    "--no-playlist",
     "-f", "bestaudio[ext=webm]/bestaudio",
     "-o", "-",
-    "--no-playlist",
-    url,
+    url
   ]);
 
   yt.stdout.on("data", () => {
