@@ -84,10 +84,15 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
 
   ytStream.on("error", (err) => {
     console.error("[yt-dlp] 오류 발생:", err);
+    yt.kill("SIGKILL");
+    ffmpeg.kill("SIGKILL");
   });
+
   ffmpeg.on("error", (err) => {
     console.error("[ffmpeg] 오류 발생:", err);
+    yt.kill("SIGKILL");
   });
+
   ffmpeg.on("close", (code) => {
     if (code !== 0) {
       console.error(`[ffmpeg] 종료 코드 ${code}`);
@@ -97,16 +102,26 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
   yt.stderr?.on("data", (data) => {
     console.error("[yt-dlp stderr]:", data.toString());
   });
+
   ffmpeg.stderr?.on("data", (data) => {
     console.error("[ffmpeg stderr]:", data.toString());
   });
 
-  if (ffmpeg.stdin && !ffmpeg.stdin.destroyed) {
+  try {
+    // Pipe 전에 writable 상태 확인
+    if (!ffmpeg.stdin || ffmpeg.stdin.destroyed || !ffmpeg.stdin.writable) {
+      yt.kill("SIGKILL");
+      ffmpeg.kill("SIGKILL");
+      throw new Error("FFmpeg stdin이 유효하지 않아 스트리밍을 시작할 수 없습니다.");
+    }
+
     ytStream.pipe(ffmpeg.stdin);
-  } else {
+  } catch (e) {
     yt.kill("SIGKILL");
-    throw new Error("FFmpeg stdin이 이미 종료되어 스트리밍을 시작할 수 없습니다.");
+    ffmpeg.kill("SIGKILL");
+    throw e;
   }
+
   return output;
 }
 
