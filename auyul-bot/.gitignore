@@ -150,3 +150,6 @@ lib
 include
 
 bin
+
+cookies.json
+
