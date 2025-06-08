@@ -5,7 +5,7 @@ import { AudioResource, createAudioResource } from "@discordjs/voice";
 
 const cookiePath = "./cookies.txt";
 
-function waitForStreamReady(stream: Readable): Promise<void> {
+export function waitForStreamReady(stream: Readable): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("Stream timed out waiting for data")), 30000);
     stream.once("data", () => {
@@ -45,6 +45,5 @@ async function streamYtDlp(url: string): Promise<Readable> {
 
 export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
   const stream = await streamYtDlp(url);
-  // await waitForStreamReady(stream);
   return createAudioResource(stream);
 }

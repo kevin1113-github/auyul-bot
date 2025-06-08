@@ -91,7 +91,7 @@ import {
   MyPlaylistMessage,
   PlaylistMessage,
 } from "./Messages.js";
-import { ytDlpAudioResource } from "./ytdlp.js";
+import { waitForStreamReady, ytDlpAudioResource } from "./ytdlp.js";
 
 const guildDataList: T_GuildData[] = [];
 
@@ -959,7 +959,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       guildData.isRepeat = true;
-      guildData.mainMessage.edit(
+      await guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -975,7 +975,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       guildData.isRepeat = false;
-      guildData.mainMessage.edit(
+      await guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -1013,7 +1013,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       guildData.audioPlayer?.pause();
       guildData.isPlaying = false;
-      guildData.mainMessage.edit(
+      await guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -1030,7 +1030,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       guildData.audioPlayer?.unpause();
       guildData.isPlaying = true;
-      guildData.mainMessage.edit(
+      await guildData.mainMessage.edit(
         new MainControllerPlayingMessage(
           guildData.playlist,
           guildData.playingIndex,
@@ -1065,9 +1065,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
+        await waitForStreamReady(resource.playStream);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
-        guildData.mainMessage.edit(
+        await guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
             guildData.playingIndex,
@@ -1103,6 +1104,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
+        await waitForStreamReady(resource.playStream);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
         await guildData.mainMessage.edit(
@@ -1458,12 +1460,13 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
       guildData.playlist[index].music.url
     );
     guildData.audioPlayer.play(resource);
+    await waitForStreamReady(resource.playStream);
 
     guildData.isPlaying = true;
     guildData.playingIndex = index;
     guildData.playingTime = 0;
 
-    guildData.mainMessage.edit(
+    await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
         guildData.playingIndex,
@@ -1527,7 +1530,8 @@ async function autoPlayNext(guildData: T_GuildData) {
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
-    guildData.mainMessage.edit(
+    await waitForStreamReady(resource.playStream);
+    await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
         guildData.playingIndex,
@@ -1556,6 +1560,7 @@ async function autoPlayNext(guildData: T_GuildData) {
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
+    await waitForStreamReady(resource.playStream);
     guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
