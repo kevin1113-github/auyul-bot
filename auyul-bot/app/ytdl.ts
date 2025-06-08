@@ -25,9 +25,10 @@ function waitForStreamReady(stream: Readable): Promise<void> {
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
   const yt = spawn("yt-dlp", [
-    "-f", "bestaudio[ext=m4a]/bestaudio",
-    "-o", "-",               // stdout
-    "--no-playlist",         // 혹시 플레이리스트면 방지
+    "-f", "bestaudio[ext=webm]/bestaudio",
+    "-o", "-",
+    "--no-playlist",
+    "--cookies", cookiePath,
     url,
   ]);
 
@@ -36,7 +37,11 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
   });
 
   yt.stderr.on("data", (data) => {
-    console.error("🔴 yt-dlp:", data.toString());
+    const msg = data.toString();
+    console.error("🔴 yt-dlp:", msg);
+    if (msg.includes("This video is unavailable")) {
+      yt.kill();
+    }
   });
 
   yt.on("error", (err) => {
@@ -51,6 +56,10 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
     "-ac", "2",
     "pipe:1",
   ], { stdio: ["pipe", "pipe", "pipe"] });
+
+  ffmpeg.stdin.on("error", (err) => {
+    console.warn("⚠️ ffmpeg.stdin error (probably broken pipe):", err.message);
+  });
 
   ffmpeg.stderr.on("data", (data) => {
     console.error("🔧 ffmpeg:", data.toString());
