@@ -1411,7 +1411,7 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
       }
     });
     guildData.audioPlayer = audioPlayer;
-    const voiceConnection: VoiceConnection | undefined = getVoiceConnection(
+    let voiceConnection: VoiceConnection | undefined = getVoiceConnection(
       guildData.guildId
     );
     if (
@@ -1441,7 +1441,9 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
         }
       );
       connection.subscribe(audioPlayer);
+      voiceConnection = connection;
     }
+    await waitForConnectionReady(voiceConnection);
 
     guildData.isPlaying = false;
     guildData.playingIndex = index;
@@ -1503,6 +1505,24 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
     }, 1000);
     guildData.timeOut = timeOut;
   }
+}
+
+function waitForConnectionReady(connection: VoiceConnection): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("connecting failed.")), 30000);
+    connection.once(VoiceConnectionStatus.Ready, () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    connection.once(VoiceConnectionStatus.Disconnected, () => {
+      clearTimeout(timeout);
+      reject();
+    });
+    connection.once(VoiceConnectionStatus.Destroyed, () => {
+      clearTimeout(timeout);
+      reject();
+    });
+  });
 }
 
 async function autoPlayNext(guildData: T_GuildData) {
