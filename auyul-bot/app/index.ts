@@ -91,7 +91,7 @@ import {
   MyPlaylistMessage,
   PlaylistMessage,
 } from "./Messages.js";
-import { waitForStreamReady, ytDlpAudioResource } from "./ytdlp.js";
+import { ytDlpAudioResource } from "./ytdlp.js";
 
 const guildDataList: T_GuildData[] = [];
 
@@ -1044,9 +1044,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (interaction.customId === "prevMusic") {
       await interaction.deferUpdate();
+      if (!guildData.audioPlayer) return;
 
       if (guildData.playingIndex > 0) {
-        guildData.audioPlayer?.stop();
+        guildData.audioPlayer.stop();
 
         guildData.playingIndex -= 1;
         guildData.isPlaying = false;
@@ -1064,8 +1065,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
-        await waitForStreamReady(resource.playStream);
-        guildData.audioPlayer?.play(resource);
+        guildData.audioPlayer.play(resource);
+        await waitForAudioPlayerPlaying(guildData.audioPlayer);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
         await guildData.mainMessage.edit(
@@ -1083,9 +1084,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (interaction.customId === "nextMusic") {
       await interaction.deferUpdate();
+      if (!guildData.audioPlayer) return;
 
       if (guildData.playingIndex < guildData.playlist.length - 1) {
-        guildData.audioPlayer?.stop();
+        guildData.audioPlayer.stop();
 
         guildData.playingIndex += 1;
         guildData.isPlaying = false;
@@ -1103,8 +1105,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
-        await waitForStreamReady(resource.playStream);
-        guildData.audioPlayer?.play(resource);
+        guildData.audioPlayer.play(resource);
+        await waitForAudioPlayerPlaying(guildData.audioPlayer);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
         await guildData.mainMessage.edit(
@@ -1461,8 +1463,8 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[index].music.url
     );
-    await waitForStreamReady(resource.playStream);
     audioPlayer.play(resource);
+    await waitForAudioPlayerPlaying(audioPlayer);
 
     guildData.isPlaying = true;
     guildData.playingIndex = index;
@@ -1507,26 +1509,9 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
   }
 }
 
-function waitForConnectionReady(connection: VoiceConnection): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error("connecting failed.")), 30000);
-    connection.once(VoiceConnectionStatus.Ready, () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-    connection.once(VoiceConnectionStatus.Disconnected, () => {
-      clearTimeout(timeout);
-      reject();
-    });
-    connection.once(VoiceConnectionStatus.Destroyed, () => {
-      clearTimeout(timeout);
-      reject();
-    });
-  });
-}
-
 async function autoPlayNext(guildData: T_GuildData) {
   guildData.playingTime = 0;
+  if (!guildData.audioPlayer) return;
 
   // 반복 재생일 경우
   if (guildData.isRepeat) {
@@ -1545,8 +1530,8 @@ async function autoPlayNext(guildData: T_GuildData) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
-    await waitForStreamReady(resource.playStream);
-    guildData.audioPlayer?.play(resource);
+    guildData.audioPlayer.play(resource);
+    await waitForAudioPlayerPlaying(guildData.audioPlayer);
     await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
@@ -1575,8 +1560,8 @@ async function autoPlayNext(guildData: T_GuildData) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
-    await waitForStreamReady(resource.playStream);
-    guildData.audioPlayer?.play(resource);
+    guildData.audioPlayer.play(resource);
+    await waitForAudioPlayerPlaying(guildData.audioPlayer);
     guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
@@ -1595,7 +1580,7 @@ async function autoPlayNext(guildData: T_GuildData) {
     guildData.isPlaying = false;
     guildData.playingIndex = 0;
     guildData.playingTime = 0;
-    guildData.audioPlayer?.stop();
+    guildData.audioPlayer.stop();
     guildData.mainMessage.edit(MainController);
     // console.log("모든 음악이 끝나 음악 재생이 종료되었습니다.");
     getVoiceConnection(guildData.guildId)?.destroy();
@@ -1700,4 +1685,32 @@ async function findGuildData(server: T_DATA): Promise<T_GuildData> {
       return newGuildData;
     })())
   );
+}
+
+async function waitForConnectionReady(connection: VoiceConnection): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("connecting failed.")), 30000);
+    connection.once(VoiceConnectionStatus.Ready, () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    connection.once(VoiceConnectionStatus.Disconnected, () => {
+      clearTimeout(timeout);
+      reject();
+    });
+    connection.once(VoiceConnectionStatus.Destroyed, () => {
+      clearTimeout(timeout);
+      reject();
+    });
+  });
+}
+
+async function waitForAudioPlayerPlaying(player: AudioPlayer): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("playing failed.")), 30000);
+    player.once(AudioPlayerStatus.Playing, () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
 }
