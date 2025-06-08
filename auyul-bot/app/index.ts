@@ -1039,7 +1039,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex > 0) {
         guildData.playingIndex -= 1;
-        const resource = ytDlpAudioResource(
+        const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
@@ -1063,7 +1063,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex < guildData.playlist.length - 1) {
         guildData.playingIndex += 1;
-        const resource = ytDlpAudioResource(
+        const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
@@ -1411,7 +1411,7 @@ eventify_push(guildDataList, (list: T_GuildData[], guildData: T_GuildData) => {
 });
 
 // playlist 재생
-function playMusic(guildData: T_GuildData, index: number = 0) {
+async function playMusic(guildData: T_GuildData, index: number = 0) {
   const voiceChannel: VoiceBasedChannel | null = guildData.voiceChannel;
   if (!voiceChannel) return; // 음성 채널에 접속되어 있지 않을 경우 재생하지 않음
   if (guildData.playlist.length > 0) {
@@ -1476,7 +1476,7 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
       );
       connection.subscribe(audioPlayer);
     }
-    const resource = ytDlpAudioResource(guildData.playlist[index].music.url);
+    const resource = await ytDlpAudioResource(guildData.playlist[index].music.url);
     guildData.audioPlayer.play(resource);
 
     /*
@@ -1548,12 +1548,12 @@ function playMusic(guildData: T_GuildData, index: number = 0) {
   }
 }
 
-function playNext(guildData: T_GuildData) {
+async function playNext(guildData: T_GuildData) {
   guildData.playingTime = 0;
 
   // 반복 재생일 경우
   if (guildData.isRepeat) {
-    const resource = ytDlpAudioResource(
+    const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);
@@ -1570,7 +1570,7 @@ function playNext(guildData: T_GuildData) {
   // 반복 재생이 아니고 마지막 음악이 아닐 경우
   else if (guildData.playingIndex + 1 < guildData.playlist.length) {
     guildData.playingIndex += 1;
-    const resource = ytDlpAudioResource(
+    const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
     guildData.audioPlayer?.play(resource);

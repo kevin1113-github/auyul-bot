@@ -1,61 +1,52 @@
-// import { AudioResource, createAudioResource } from "@discordjs/voice";
-// // import ytdl from "ytdl-core";
-// import ytdl from "@distube/ytdl-core";
-// import fs from "fs";
-
-// const cookies = JSON.parse(fs.readFileSync("cookies.json").toString());
-// const agent = ytdl.createAgent(cookies);
-// console.log("ytdl agent created:", cookies);
-
-// function ytdlmusic (url: string) {
-//   return ytdl(url, {
-//     agent: agent,
-//     filter: "audioonly",
-//     quality: "highestaudio",
-//     dlChunkSize: 0,
-//     begin: 0,
-//     highWaterMark: 1 << 25,
-//   });
-// }
-
-// export function ytdlAudioResource (url: string) {
-//   const stream = ytdlmusic(url);
-//   const audioResource: AudioResource = createAudioResource(stream);
-//   return audioResource;
-// }
-
 import { AudioResource, createAudioResource } from "@discordjs/voice";
-import { YtDlpPlugin } from "@distube/yt-dlp";
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import fs from "fs";
 
-// yt-dlp 실행 인자 세팅
-// const cookies = JSON.parse(fs.readFileSync("cookies.json").toString());
 const cookiePath = "./cookies.txt";
 
-// 쿠키 파일 생성 (yt-dlp는 파일 형식 쿠키만 지원)
-// fs.writeFileSync(cookiePath, cookies.map((c: any) => `${c.name}=${c.value}`).join("; "));
+// stream이 최소한 하나의 chunk를 보낼 때까지 기다리는 함수
+function waitForStreamReady(stream: Readable): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("Stream timed out waiting for data"));
+    }, 5000); // 5초 안에 chunk가 안 오면 실패 처리
 
-function streamFromYtDlp(url: string): Readable {
+    stream.once("data", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+
+    stream.once("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+
+    stream.once("end", () => {
+      clearTimeout(timeout);
+      reject(new Error("Stream ended before producing data"));
+    });
+  });
+}
+
+async function streamFromYtDlp(url: string): Promise<Readable> {
   const ytdlp = spawn("yt-dlp", [
     "-f", "bestaudio",
     "-o", "-",
     "--cookies", cookiePath,
-    url
+    url,
   ]);
 
-  ytdlp.stderr.on("data", data => {
-    console.error(`yt-dlp error: ${data}`);
+  ytdlp.stderr.on("data", (data) => {
+    console.error(`🔴 yt-dlp stderr: ${data.toString()}`);
   });
 
   return ytdlp.stdout as Readable;
 }
 
-export function ytDlpAudioResource(url: string): AudioResource {
-  const stream = streamFromYtDlp(url);
-  const resource = createAudioResource(stream, {
-    inlineVolume: true,
-  });
+export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
+  const stream = await streamFromYtDlp(url);
+  await waitForStreamReady(stream);
+  const resource = createAudioResource(stream, { inlineVolume: true });
+  resource.volume?.setVolume(1.0);
   return resource;
 }
