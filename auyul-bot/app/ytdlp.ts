@@ -5,6 +5,24 @@ import { AudioResource, createAudioResource } from "@discordjs/voice";
 
 const cookiePath = "./cookies.txt";
 
+function waitForStreamReady(stream: Readable): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Stream timed out waiting for data")), 30000);
+    stream.once("data", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    stream.once("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+    stream.once("end", () => {
+      clearTimeout(timeout);
+      reject(new Error("Stream ended before receiving data"));
+    });
+  });
+}
+
 function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readable } {
   const yt = spawn("yt-dlp", [
     "--force-ipv4",
@@ -27,5 +45,6 @@ async function streamYtDlp(url: string): Promise<Readable> {
 
 export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
   const stream = await streamYtDlp(url);
+  await waitForStreamReady(stream);
   return createAudioResource(stream);
 }

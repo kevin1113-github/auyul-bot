@@ -1041,6 +1041,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
         guildData.audioPlayer?.stop();
 
         guildData.playingIndex -= 1;
+        guildData.isPlaying = false;
+        guildData.playingTime = 0;
+        await guildData.mainMessage.edit(
+          new MainControllerPlayingMessage(
+            guildData.playlist,
+            guildData.playingIndex,
+            guildData.playingTime,
+            guildData.isPlaying,
+            guildData.isRepeat
+          ).getMessage()
+        );
         const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
@@ -1067,13 +1078,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
         guildData.audioPlayer?.stop();
 
         guildData.playingIndex += 1;
+        guildData.isPlaying = false;
+        guildData.playingTime = 0;
+        await guildData.mainMessage.edit(
+          new MainControllerPlayingMessage(
+            guildData.playlist,
+            guildData.playingIndex,
+            guildData.playingTime,
+            guildData.isPlaying,
+            guildData.isRepeat
+          ).getMessage()
+        );
         const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
         guildData.audioPlayer?.play(resource);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
-        guildData.mainMessage.edit(
+        await guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
             guildData.playingIndex,
@@ -1202,7 +1224,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (guildData.playingIndex == index) {
         if (guildData.isPlaying) {
-          playNext(guildData);
+          autoPlayNext(guildData);
         }
       }
       if (guildData.playingIndex > index) {
@@ -1545,18 +1567,29 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
           guildData.playingTime,
           guildData.playlist[guildData.playingIndex].music.seconds
         );
-        playNext(guildData);
+        autoPlayNext(guildData);
       }
     }, 1000);
     guildData.timeOut = timeOut;
   }
 }
 
-async function playNext(guildData: T_GuildData) {
+async function autoPlayNext(guildData: T_GuildData) {
   guildData.playingTime = 0;
 
   // 반복 재생일 경우
   if (guildData.isRepeat) {
+    guildData.isPlaying = false;
+    guildData.playingTime = 0;
+    await guildData.mainMessage.edit(
+      new MainControllerPlayingMessage(
+        guildData.playlist,
+        guildData.playingIndex,
+        guildData.playingTime,
+        guildData.isPlaying,
+        guildData.isRepeat
+      ).getMessage()
+    );
     const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
@@ -1574,6 +1607,17 @@ async function playNext(guildData: T_GuildData) {
   // 반복 재생이 아니고 마지막 음악이 아닐 경우
   else if (guildData.playingIndex + 1 < guildData.playlist.length) {
     guildData.playingIndex += 1;
+    guildData.isPlaying = false;
+    guildData.playingTime = 0;
+    await guildData.mainMessage.edit(
+      new MainControllerPlayingMessage(
+        guildData.playlist,
+        guildData.playingIndex,
+        guildData.playingTime,
+        guildData.isPlaying,
+        guildData.isRepeat
+      ).getMessage()
+    );
     const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
