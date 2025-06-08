@@ -1064,8 +1064,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
-        guildData.audioPlayer?.play(resource);
         await waitForStreamReady(resource.playStream);
+        guildData.audioPlayer?.play(resource);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
         await guildData.mainMessage.edit(
@@ -1103,8 +1103,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const resource = await ytDlpAudioResource(
           guildData.playlist[guildData.playingIndex].music.url
         );
-        guildData.audioPlayer?.play(resource);
         await waitForStreamReady(resource.playStream);
+        guildData.audioPlayer?.play(resource);
         guildData.isPlaying = true;
         guildData.playingTime = 0;
         await guildData.mainMessage.edit(
@@ -1461,8 +1461,8 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[index].music.url
     );
-    audioPlayer.play(resource);
     await waitForStreamReady(resource.playStream);
+    audioPlayer.play(resource);
 
     guildData.isPlaying = true;
     guildData.playingIndex = index;
@@ -1545,8 +1545,8 @@ async function autoPlayNext(guildData: T_GuildData) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
-    guildData.audioPlayer?.play(resource);
     await waitForStreamReady(resource.playStream);
+    guildData.audioPlayer?.play(resource);
     await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
@@ -1575,8 +1575,8 @@ async function autoPlayNext(guildData: T_GuildData) {
     const resource = await ytDlpAudioResource(
       guildData.playlist[guildData.playingIndex].music.url
     );
-    guildData.audioPlayer?.play(resource);
     await waitForStreamReady(resource.playStream);
+    guildData.audioPlayer?.play(resource);
     guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
