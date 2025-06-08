@@ -1068,7 +1068,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         guildData.audioPlayer.play(resource);
         await waitForAudioPlayerPlaying(guildData.audioPlayer);
         guildData.isPlaying = true;
-        guildData.playingTime = 0;
+        const timeOut: NodeJS.Timeout = setInterval(() => refreshMainMessage(guildData), 1000);
+        if (guildData.timeOut) clearInterval(guildData.timeOut);
+        guildData.timeOut = timeOut;
         await guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
@@ -1108,7 +1110,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         guildData.audioPlayer.play(resource);
         await waitForAudioPlayerPlaying(guildData.audioPlayer);
         guildData.isPlaying = true;
-        guildData.playingTime = 0;
+        const timeOut: NodeJS.Timeout = setInterval(() => refreshMainMessage(guildData), 1000);
+        if (guildData.timeOut) clearInterval(guildData.timeOut);
+        guildData.timeOut = timeOut;
         await guildData.mainMessage.edit(
           new MainControllerPlayingMessage(
             guildData.playlist,
@@ -1463,10 +1467,10 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
     );
     audioPlayer.play(resource);
     await waitForAudioPlayerPlaying(audioPlayer);
-
     guildData.isPlaying = true;
-    guildData.playingIndex = index;
-    guildData.playingTime = 0;
+    const timeOut: NodeJS.Timeout = setInterval(() => refreshMainMessage(guildData), 1000);
+    if (guildData.timeOut) clearInterval(guildData.timeOut);
+    guildData.timeOut = timeOut;
 
     await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
@@ -1477,33 +1481,6 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
         guildData.isRepeat
       ).getMessage()
     );
-
-    const timeOut: NodeJS.Timeout = setInterval(() => {
-      if (!guildData.isPlaying) {
-        return;
-      }
-      guildData.playingTime += 1;
-      if (guildData.playingTime % 10 == 0) {
-        guildData.mainMessage.edit(
-          new MainControllerPlayingMessage(
-            guildData.playlist,
-            guildData.playingIndex,
-            guildData.playingTime,
-            guildData.isPlaying,
-            guildData.isRepeat
-          ).getMessage()
-        );
-      }
-
-      // 음악이 끝나면 다음 음악을 재생
-      if (
-        guildData.playingTime >=
-        guildData.playlist[guildData.playingIndex].music.seconds
-      ) {
-        autoPlayNext(guildData);
-      }
-    }, 1000);
-    guildData.timeOut = timeOut;
   }
 }
 
@@ -1530,6 +1507,11 @@ async function autoPlayNext(guildData: T_GuildData) {
     );
     guildData.audioPlayer.play(resource);
     await waitForAudioPlayerPlaying(guildData.audioPlayer);
+    guildData.isPlaying = true;
+    const timeOut: NodeJS.Timeout = setInterval(() => refreshMainMessage(guildData), 1000);
+    if (guildData.timeOut) clearInterval(guildData.timeOut);
+    guildData.timeOut = timeOut;
+
     await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
@@ -1560,7 +1542,12 @@ async function autoPlayNext(guildData: T_GuildData) {
     );
     guildData.audioPlayer.play(resource);
     await waitForAudioPlayerPlaying(guildData.audioPlayer);
-    guildData.mainMessage.edit(
+    guildData.isPlaying = true;
+    const timeOut: NodeJS.Timeout = setInterval(() => refreshMainMessage(guildData), 1000);
+    if (guildData.timeOut) clearInterval(guildData.timeOut);
+    guildData.timeOut = timeOut;
+
+    await guildData.mainMessage.edit(
       new MainControllerPlayingMessage(
         guildData.playlist,
         guildData.playingIndex,
@@ -1711,4 +1698,30 @@ async function waitForAudioPlayerPlaying(player: AudioPlayer): Promise<void> {
       resolve();
     });
   });
+}
+
+function refreshMainMessage(guildData: T_GuildData) {
+  if (!guildData.isPlaying) {
+    return;
+  }
+  guildData.playingTime += 1;
+  if (guildData.playingTime % 10 == 0) {
+    guildData.mainMessage.edit(
+      new MainControllerPlayingMessage(
+        guildData.playlist,
+        guildData.playingIndex,
+        guildData.playingTime,
+        guildData.isPlaying,
+        guildData.isRepeat
+      ).getMessage()
+    );
+  }
+
+  // 음악이 끝나면 다음 음악을 재생
+  if (
+    guildData.playingTime >=
+    guildData.playlist[guildData.playingIndex].music.seconds
+  ) {
+    autoPlayNext(guildData);
+  }
 }
