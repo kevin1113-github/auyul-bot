@@ -808,9 +808,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       await playlist.destroy();
 
-      const playlistList: T_UserPlaylist[] = (await UserPlaylist.findAll({
-        where: { user_id: interaction.user.id }
-      })).map((playlist: T_DATA):T_UserPlaylist => { return GetUserPlaylist(playlist) })
+      const playlistList: T_UserPlaylist[] = (
+        await UserPlaylist.findAll({
+          where: { user_id: interaction.user.id },
+        })
+      ).map((playlist: T_DATA): T_UserPlaylist => {
+        return GetUserPlaylist(playlist);
+      });
       await interaction.update(
         // new EmptyEmbedMessage(`플레이리스트가 삭제되었습니다.`).getMessage()
         new MyPlaylistListMessage(playlistList, 0).getMessage()
@@ -819,9 +823,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.customId === "deleteMyPlaylistCancel") {
-      const playlistList: T_UserPlaylist[] = (await UserPlaylist.findAll({
-        where: { user_id: interaction.user.id }
-      })).map((playlist: T_DATA):T_UserPlaylist => { return GetUserPlaylist(playlist) })
+      const playlistList: T_UserPlaylist[] = (
+        await UserPlaylist.findAll({
+          where: { user_id: interaction.user.id },
+        })
+      ).map((playlist: T_DATA): T_UserPlaylist => {
+        return GetUserPlaylist(playlist);
+      });
       await interaction.update(
         // new EmptyEmbedMessage(`플레이리스트가 삭제되었습니다.`).getMessage()
         new MyPlaylistListMessage(playlistList, 0).getMessage()
@@ -1049,7 +1057,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
             guildData.playingIndex,
             guildData.playingTime,
             guildData.isPlaying,
-            guildData.isRepeat
+            guildData.isRepeat,
+            true
           ).getMessage()
         );
         const resource = await ytDlpAudioResource(
@@ -1086,7 +1095,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
             guildData.playingIndex,
             guildData.playingTime,
             guildData.isPlaying,
-            guildData.isRepeat
+            guildData.isRepeat,
+            true
           ).getMessage()
         );
         const resource = await ytDlpAudioResource(
@@ -1498,7 +1508,7 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
       );
       connection.subscribe(audioPlayer);
     }
-    
+
     guildData.isPlaying = false;
     guildData.playingIndex = index;
     guildData.playingTime = 0;
@@ -1508,10 +1518,13 @@ async function playMusic(guildData: T_GuildData, index: number = 0) {
         guildData.playingIndex,
         guildData.playingTime,
         guildData.isPlaying,
-        guildData.isRepeat
+        guildData.isRepeat,
+        true
       ).getMessage()
     );
-    const resource = await ytDlpAudioResource(guildData.playlist[index].music.url);
+    const resource = await ytDlpAudioResource(
+      guildData.playlist[index].music.url
+    );
     guildData.audioPlayer.play(resource);
 
     guildData.isPlaying = true;
@@ -1574,7 +1587,8 @@ async function autoPlayNext(guildData: T_GuildData) {
         guildData.playingIndex,
         guildData.playingTime,
         guildData.isPlaying,
-        guildData.isRepeat
+        guildData.isRepeat,
+        true
       ).getMessage()
     );
     const resource = await ytDlpAudioResource(
@@ -1602,7 +1616,8 @@ async function autoPlayNext(guildData: T_GuildData) {
         guildData.playingIndex,
         guildData.playingTime,
         guildData.isPlaying,
-        guildData.isRepeat
+        guildData.isRepeat,
+        true
       ).getMessage()
     );
     const resource = await ytDlpAudioResource(
