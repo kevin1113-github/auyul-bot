@@ -15,11 +15,15 @@ function waitForStreamReady(stream: Readable): Promise<void> {
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
   const yt = spawn("yt-dlp", [
-    "-f", "bestaudio",
+    "-f", "140", // ← 명확한 m4a 포맷으로 변경
     "-o", "-", // stdout으로 출력
     "--cookies", cookiePath,
     url,
   ]);
+
+  (yt.stderr as NodeJS.ReadableStream).on("data", (data) => {
+    console.error("🔴 yt-dlp:", data.toString());
+  });
 
   const ffmpeg = spawn("ffmpeg", [
     "-loglevel", "debug", // 디버깅 로그 추가
