@@ -38,6 +38,9 @@ function spawnYtDlp(url: string): { yt: ReturnType<typeof spawn>, output: Readab
   return { yt, output: yt.stdout };
 }
 
+// 전역에서 ffmpeg 프로세스를 관리하도록 export
+let currentFfmpeg: ReturnType<typeof spawn> | null = null;
+
 function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
   const ffmpeg = spawn("ffmpeg", [
     "-loglevel", "error",
@@ -48,8 +51,17 @@ function spawnFfmpeg(): { ffmpeg: ReturnType<typeof spawn>, output: Readable } {
     "pipe:1",
   ]);
 
+  currentFfmpeg = ffmpeg;
   return { ffmpeg, output: ffmpeg.stdout };
 }
+
+export function stopCurrentFfmpeg() {
+  if (currentFfmpeg && !currentFfmpeg.killed) {
+    currentFfmpeg.kill("SIGKILL");
+    currentFfmpeg = null;
+  }
+}
+
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
   const { yt, output: ytStream } = spawnYtDlp(url);
