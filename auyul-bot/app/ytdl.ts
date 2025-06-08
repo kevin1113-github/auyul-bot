@@ -1,56 +1,46 @@
-import { AudioResource, createAudioResource } from "@discordjs/voice";
 import { spawn } from "child_process";
 import { Readable } from "stream";
+import { AudioResource, createAudioResource, StreamType } from "@discordjs/voice";
 
 const cookiePath = "./cookies.txt";
 
-// stream이 최소한 하나의 chunk를 보낼 때까지 기다리는 함수
 function waitForStreamReady(stream: Readable): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error("Stream timed out waiting for data"));
-    }, 5000); // 5초 안에 chunk가 안 오면 실패 처리
-
-    stream.once("data", () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-
-    stream.once("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-
-    stream.once("end", () => {
-      clearTimeout(timeout);
-      reject(new Error("Stream ended before producing data"));
-    });
+    const timeout = setTimeout(() => reject(new Error("Stream timed out waiting for data")), 5000);
+    stream.once("data", () => { clearTimeout(timeout); resolve(); });
+    stream.once("error", (err) => { clearTimeout(timeout); reject(err); });
+    stream.once("end", () => { clearTimeout(timeout); reject(new Error("Stream ended before data")); });
   });
 }
 
-async function streamFromYtDlp(url: string): Promise<Readable> {
-  const ytdlp = spawn("yt-dlp", [
-    "--verbose",
-    "-f",
-    "bestaudio",
-    "-o",
-    "-",
-    "--cookies",
-    cookiePath,
+async function streamWithFfmpeg(url: string): Promise<Readable> {
+  const yt = spawn("yt-dlp", [
+    "-f", "bestaudio",
+    "-o", "-", // stdout으로 출력
+    "--cookies", cookiePath,
     url,
   ]);
 
-  ytdlp.stderr.on("data", (data) => {
-    console.error(`🔴 yt-dlp stderr: ${data.toString()}`);
-  });
+  const ffmpeg = spawn("ffmpeg", [
+    "-i", "pipe:0",       // yt-dlp의 stdout
+    "-f", "s16le",        // 리니어 PCM
+    "-ar", "48000",       // Discord용 표준 샘플레이트
+    "-ac", "2",           // 스테레오
+    "pipe:1",             // ffmpeg의 stdout
+  ], { stdio: ["pipe", "pipe", "ignore"] });
 
-  return ytdlp.stdout as Readable;
+  yt.stdout.pipe(ffmpeg.stdin);
+
+  return ffmpeg.stdout as Readable;
 }
 
 export async function ytDlpAudioResource(url: string): Promise<AudioResource> {
-  const stream = await streamFromYtDlp(url);
+  const stream = await streamWithFfmpeg(url);
   await waitForStreamReady(stream);
-  const resource = createAudioResource(stream, { inlineVolume: true });
+  const resource = createAudioResource(stream, {
+    inputType: StreamType.Raw, // 리니어 PCM
+    inlineVolume: true,
+  });
   resource.volume?.setVolume(1.0);
   return resource;
 }
