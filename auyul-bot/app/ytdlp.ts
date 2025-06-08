@@ -88,6 +88,11 @@ async function streamWithFfmpeg(url: string): Promise<Readable> {
   ffmpeg.on("error", (err) => {
     console.error("[ffmpeg] 오류 발생:", err);
   });
+  ffmpeg.on("close", (code) => {
+    if (code !== 0) {
+      console.error(`[ffmpeg] 종료 코드 ${code}`);
+    }
+  });
 
   yt.stderr?.on("data", (data) => {
     console.error("[yt-dlp stderr]:", data.toString());
