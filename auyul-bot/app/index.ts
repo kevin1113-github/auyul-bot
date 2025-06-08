@@ -1166,9 +1166,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const playlist: T_DATA | null = await UserPlaylist.findOne({
         where: { id: playlistId },
       });
+      await interaction.deferUpdate();
 
       if (!playlist) {
-        await interaction.update(
+        await interaction.editReply(
           new EmptyEmbedMessage(`플레이리스트를 찾을 수 없습니다.`).getMessage()
         );
         return;
@@ -1181,7 +1182,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         playlist: [...playlist.dataValues.playlist, video],
       });
 
-      await interaction.update({
+      await interaction.editReply({
         ...new MyPlaylistMessage(GetUserPlaylist(playlist), 0).getMessage()
       });
       return;
