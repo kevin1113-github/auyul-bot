@@ -199,7 +199,8 @@ export class MainControllerPlayingMessage implements MessageInterface {
       .setCustomId(isPlaying ? "pauseMusic" : "playMusic")
       // .setLabel(isPlaying ? "일시정지" : "재생")
       .setStyle(ButtonStyle.Success)
-      .setEmoji(isPlaying ? "1256636201293840437" : "1256636200157053009");
+      .setEmoji(isPlaying ? "1256636201293840437" : "1256636200157053009")
+      .setDisabled(isLoding);
     this.nextButton = new ButtonBuilder()
       .setCustomId("nextMusic")
       // .setLabel("다음곡")
