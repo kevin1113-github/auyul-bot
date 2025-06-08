@@ -25,12 +25,15 @@ function waitForStreamReady(stream: Readable): Promise<void> {
 
 async function streamWithFfmpeg(url: string): Promise<Readable> {
   const yt = spawn("yt-dlp", [
-    "-f", "bestaudio",       // ← 확장자 강제 없이 포맷 우선순위에 맡기기
+    "-f", "bestaudio[ext=m4a]/bestaudio",
     "-o", "-",               // stdout
     "--no-playlist",         // 혹시 플레이리스트면 방지
-    "--cookies", cookiePath,
     url,
   ]);
+
+  yt.stdout.on("data", () => {
+    console.log("✅ yt-dlp is sending data");
+  });
 
   yt.stderr.on("data", (data) => {
     console.error("🔴 yt-dlp:", data.toString());
