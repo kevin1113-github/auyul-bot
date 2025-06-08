@@ -1038,7 +1038,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       if (guildData.playingIndex > 0) {
-        guildData.audioPlayer?.stop();
+        guildData.audioPlayer?.stop(true);
         stopCurrentProcesses();
 
         guildData.playingIndex -= 1;
@@ -1065,7 +1065,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferUpdate();
 
       if (guildData.playingIndex < guildData.playlist.length - 1) {
-        guildData.audioPlayer?.stop();
+        guildData.audioPlayer?.stop(true);
         stopCurrentProcesses();
 
         guildData.playingIndex += 1;
