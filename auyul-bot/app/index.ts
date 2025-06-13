@@ -114,6 +114,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
   ],
 });
+
 let httpServer: HttpServer;
 client.once(Events.ClientReady, async () => {
   // TODO: DB 불러오기
@@ -1320,8 +1321,6 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   }
 });
 
-client.login(TOKEN);
-
 function getNickName(interaction: Interaction): string {
   const name: string = interaction.user.globalName || interaction.user.username;
   return interaction.member instanceof GuildMember
@@ -1723,3 +1722,6 @@ function refreshMainMessage(guildData: T_GuildData) {
     autoPlayNext(guildData);
   }
 }
+
+
+client.login(TOKEN);
