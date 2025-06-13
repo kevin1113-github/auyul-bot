@@ -92,7 +92,7 @@ const mainControllerMessage = new MainControllerMessage();
 export const MainController = mainControllerMessage.getMessage();
 
 export class MainControllerPlayingMessage implements MessageInterface {
-  private isLoding: boolean;
+  private isLoading: boolean;
 
   private playlist: T_GuildPlaylist[];
   private playingIndex: number;
@@ -117,13 +117,13 @@ export class MainControllerPlayingMessage implements MessageInterface {
     playingTime: number,
     isPlaying: boolean,
     isRepeat: boolean,
-    isLoding: boolean = false
+    isLoading: boolean = false
   ) {
     this.playlist = playlist;
     this.playingIndex = playingIndex;
     this.playingTime = playingTime;
     this.isPlaying = isPlaying;
-    this.isLoding = isLoding;
+    this.isLoading = isLoading;
 
     const barLength: number = 10;
 
@@ -155,7 +155,7 @@ export class MainControllerPlayingMessage implements MessageInterface {
       )
       // .setTitle(`0:00 ━━━━●────────── 4:00`)
       // .setTitle(``)
-      .setThumbnail(isLoding ? "https://github.com/kevin1113-github/auyul-bot/blob/master/loading.gif?raw=true" : playlist[playingIndex].play_user.displayAvatarURL())
+      .setThumbnail(isLoading ? "https://github.com/kevin1113-github/auyul-bot/blob/master/loading.gif?raw=true" : playlist[playingIndex].play_user.displayAvatarURL())
       .setImage(playlist[playingIndex].music.thumbnail)
       .setFooter({
         text: "아율봇 ⓒ 2024. @kevin1113dev All Rights Reserved.",
@@ -200,7 +200,7 @@ export class MainControllerPlayingMessage implements MessageInterface {
       // .setLabel(isPlaying ? "일시정지" : "재생")
       .setStyle(ButtonStyle.Success)
       .setEmoji(isPlaying ? "1256636201293840437" : "1256636200157053009")
-      .setDisabled(isLoding);
+      .setDisabled(isLoading);
     this.nextButton = new ButtonBuilder()
       .setCustomId("nextMusic")
       // .setLabel("다음곡")
