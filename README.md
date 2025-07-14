@@ -2,7 +2,7 @@
 
 ## 아율봇 (auyul-bot, 가칭) vPre-Dev
 
-<img src="./auyul-profile.png" width="30%" height="30%" />
+<img src="./auyul-profile.png" width="30%" />
 
 아율봇은 discord.js 라이브러리를 활용하여 제작 되었습니다.
 
